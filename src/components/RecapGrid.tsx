@@ -40,9 +40,6 @@ export default function RecapGrid({ data, drivers }: Props) {
 
   const fmt = (v: number) => (v ? v.toFixed(2) + " €" : "");
 
-  // Only show drivers that have data
-  const activeDrivers = driverTotals.filter((d) => d.total > 0);
-
   return (
     <div className="overflow-x-auto">
       <h2 className="text-lg font-bold text-primary mb-3">
