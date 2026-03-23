@@ -19,7 +19,7 @@ export default function ArchiveList({ archives, onView, onDelete }: Props) {
         <div key={a.id} className="flex items-center justify-between bg-card border border-border rounded-md px-4 py-2">
           <div>
             <span className="font-medium text-foreground">
-              {MONTH_NAMES[a.month]} {a.year}
+              Recettes Lignes {MONTH_NAMES[a.month]} {a.year}
             </span>
             <span className="text-muted-foreground text-xs ml-3">
               Sauvegardé le {new Date(a.savedAt).toLocaleDateString("fr-FR")}

@@ -6,6 +6,7 @@ import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import ArchiveList from "@/components/ArchiveList";
+import StatsPanel from "@/components/StatsPanel";
 import { Button } from "@/components/ui/button";
 import { Save, RotateCcw, Archive } from "lucide-react";
 import { toast } from "sonner";
@@ -60,10 +61,20 @@ export default function Index() {
     toast.success(`Chauffeur ${name} supprimé`);
   }, [selectedDriver]);
 
+  const handleRenameDriver = useCallback((oldName: string, newName: string) => {
+    setDrivers((prev) => prev.map((d) => (d === oldName ? newName : d)).sort());
+    setData((prev) => {
+      const { [oldName]: driverData, ...rest } = prev.drivers;
+      return { ...prev, drivers: driverData ? { ...rest, [newName]: driverData } : rest };
+    });
+    if (selectedDriver === oldName) setSelectedDriver(newName);
+    toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
+  }, [selectedDriver]);
+
   const handleSaveAndArchive = useCallback(() => {
     archiveMonth(data);
     setArchives(loadArchives());
-    toast.success(`${MONTH_NAMES[data.month]} ${data.year} archivé avec succès !`);
+    toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} archivé avec succès !`);
   }, [data]);
 
   const handleReset = useCallback(() => {
@@ -114,13 +125,16 @@ export default function Index() {
               onSelect={setSelectedDriver}
               onAddDriver={handleAddDriver}
               onRemoveDriver={handleRemoveDriver}
+              onRenameDriver={handleRenameDriver}
             />
           </div>
 
-          {/* Right: Grid */}
+          {/* Right: Grid or Stats */}
           <div className="flex-1 min-w-0">
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-              {selectedDriver === null ? (
+              {selectedDriver === "__stats__" ? (
+                <StatsPanel currentData={data} archives={archives} drivers={drivers} />
+              ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
                 <RevenueGrid
@@ -151,7 +165,7 @@ export default function Index() {
         <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>
-              Archive — {viewingArchive && `${MONTH_NAMES[viewingArchive.month]} ${viewingArchive.year}`}
+              {viewingArchive && `Recettes Lignes ${MONTH_NAMES[viewingArchive.month]} ${viewingArchive.year}`}
             </DialogTitle>
           </DialogHeader>
           {viewingArchive && (
