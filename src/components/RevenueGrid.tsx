@@ -70,7 +70,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
   const getTotalCB = (): number =>
     CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "cb"), 0);
 
-  const fmt = (v: number) => (v ? v.toFixed(2) + " €" : "");
+  const fmt = (v: number) => v.toFixed(2).replace(".", ",") + " €";
 
   return (
     <div className="overflow-x-auto">
