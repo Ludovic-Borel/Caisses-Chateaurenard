@@ -39,6 +39,13 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        grid: {
+          header: "hsl(var(--grid-header))",
+          "header-foreground": "hsl(var(--grid-header-foreground))",
+          total: "hsl(var(--grid-total))",
+          especes: "hsl(var(--grid-especes))",
+          cb: "hsl(var(--grid-cb))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
