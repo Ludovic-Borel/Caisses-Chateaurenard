@@ -1,7 +1,17 @@
-import { MonthData, SavedMonth } from "./types";
+import { MonthData, SavedMonth, DEFAULT_DRIVERS } from "./types";
 
-const CURRENT_KEY = "recettes_current";
-const ARCHIVE_KEY = "recettes_archive";
+const CURRENT_KEY = "recettes_current_v2";
+const ARCHIVE_KEY = "recettes_archive_v2";
+const DRIVERS_KEY = "recettes_drivers";
+
+export function loadDrivers(): string[] {
+  const raw = localStorage.getItem(DRIVERS_KEY);
+  return raw ? JSON.parse(raw) : DEFAULT_DRIVERS;
+}
+
+export function saveDrivers(drivers: string[]): void {
+  localStorage.setItem(DRIVERS_KEY, JSON.stringify(drivers));
+}
 
 export function loadCurrentMonth(): MonthData | null {
   const raw = localStorage.getItem(CURRENT_KEY);
@@ -21,7 +31,6 @@ export function archiveMonth(data: MonthData): void {
     data,
     savedAt: new Date().toISOString(),
   };
-  // Replace existing archive for same month/year
   const filtered = archives.filter(
     (a) => !(a.year === data.year && a.month === data.month)
   );

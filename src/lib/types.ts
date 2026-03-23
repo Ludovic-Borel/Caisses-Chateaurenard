@@ -7,10 +7,18 @@ export interface DayEntry {
   [key: string]: number; // key = `${category}_${paymentType}`
 }
 
+// Per-driver monthly data
+export interface DriverMonthData {
+  days: Record<number, DayEntry>; // day 1-31
+}
+
+// Full month with all drivers
 export interface MonthData {
   year: number;
   month: number; // 0-11
-  days: Record<number, DayEntry>; // day 1-31
+  drivers: Record<string, DriverMonthData>;
+  // Global "récap" grid kept for backward compat
+  days: Record<number, DayEntry>;
 }
 
 export interface SavedMonth {
@@ -32,4 +40,16 @@ export function getDaysInMonth(year: number, month: number): number {
 export const MONTH_NAMES = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+];
+
+export const DEFAULT_DRIVERS = [
+  "ABBADI", "ABOUBAKAR", "ALKAMA", "ARKOUS", "AJHIOU", "BEC", "BELHAJ",
+  "BENRAHOU", "BENZEROUK", "BERNARAS", "BOREL", "CALATAYUD", "CAMPOS",
+  "CHAKOR", "CHAMANIER", "CHAMBRON", "CHAROUITE", "CHAVOUTIER", "CHOUANE",
+  "DJAHMI", "DRID", "EL BADRI", "ESPOSITO", "FARE", "FATIHI", "FILIPE",
+  "GHRIB", "GILLES", "GOZIN", "GUILLOT", "HAJJI", "ISOARDO", "JUAN",
+  "LACOMBE", "LE BIGOT", "MHAYA M", "MHAYA N", "MACHABERT", "MAFFEI",
+  "MANFRINI", "MARCON", "MARTINEZ", "MEYER", "MSELLI", "PALOMARES",
+  "PANAROTTO", "PREAUX A", "RAKOTO", "RASCOL", "REY J", "REY M", "REY T",
+  "ROLLAND", "STANGHELLINI", "TANNOUCH", "THOMASSIN"
 ];
