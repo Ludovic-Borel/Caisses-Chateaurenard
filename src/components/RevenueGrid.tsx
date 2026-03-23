@@ -99,7 +99,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                         type="number"
                         step="0.01"
                         min="0"
-                        className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs"
+                        className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={getValue(day, cat, pt) || ""}
                         onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
                       />
