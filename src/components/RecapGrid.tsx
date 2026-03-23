@@ -8,11 +8,14 @@ interface Props {
 export default function RecapGrid({ data, drivers }: Props) {
   const daysInMonth = getDaysInMonth(data.year, data.month);
 
-  // Compute per-driver totals
+  const fmt = (v: number) => v.toFixed(2).replace(".", ",") + " €";
+
+  // Compute per-driver totals + non-returned amounts
   const driverTotals = drivers.map((driver) => {
     const driverData = data.drivers[driver];
     let totalEspeces = 0;
     let totalCB = 0;
+    let totalNotReturned = 0;
     const categoryTotals: Record<string, { especes: number; cb: number }> = {};
 
     CATEGORIES.forEach((cat) => {
@@ -20,8 +23,13 @@ export default function RecapGrid({ data, drivers }: Props) {
       let cb = 0;
       if (driverData) {
         for (let d = 1; d <= daysInMonth; d++) {
-          especes += driverData.days[d]?.[getCellKey(cat, "especes")] || 0;
-          cb += driverData.days[d]?.[getCellKey(cat, "cb")] || 0;
+          const eVal = driverData.days[d]?.[getCellKey(cat, "especes")] || 0;
+          const cVal = driverData.days[d]?.[getCellKey(cat, "cb")] || 0;
+          especes += eVal;
+          cb += cVal;
+          // Check non-returned
+          if (driverData.notReturned?.[`${d}_${cat}_especes`] && eVal) totalNotReturned += eVal;
+          if (driverData.notReturned?.[`${d}_${cat}_cb`] && cVal) totalNotReturned += cVal;
         }
       }
       categoryTotals[cat] = { especes, cb };
@@ -29,16 +37,15 @@ export default function RecapGrid({ data, drivers }: Props) {
       totalCB += cb;
     });
 
-    return { driver, categoryTotals, totalEspeces, totalCB, total: totalEspeces + totalCB };
+    return { driver, categoryTotals, totalEspeces, totalCB, total: totalEspeces + totalCB, totalNotReturned };
   });
 
   const grandTotals = {
     especes: driverTotals.reduce((s, d) => s + d.totalEspeces, 0),
     cb: driverTotals.reduce((s, d) => s + d.totalCB, 0),
     total: driverTotals.reduce((s, d) => s + d.total, 0),
+    notReturned: driverTotals.reduce((s, d) => s + d.totalNotReturned, 0),
   };
-
-  const fmt = (v: number) => (v ? v.toFixed(2) + " €" : "");
 
   return (
     <div className="overflow-x-auto">
@@ -57,6 +64,7 @@ export default function RecapGrid({ data, drivers }: Props) {
             <th className="border border-border px-2 py-1.5 text-center">Espèces</th>
             <th className="border border-border px-2 py-1.5 text-center">CB</th>
             <th className="border border-border px-2 py-1.5 text-center">Total</th>
+            <th className="border border-border px-2 py-1.5 text-center text-destructive">Non rendu</th>
           </tr>
           <tr className="bg-secondary text-secondary-foreground">
             <th className="border border-border px-3 py-1"></th>
@@ -70,6 +78,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                 </th>
               </>
             ))}
+            <th className="border border-border px-2 py-1"></th>
             <th className="border border-border px-2 py-1"></th>
             <th className="border border-border px-2 py-1"></th>
             <th className="border border-border px-2 py-1"></th>
@@ -100,6 +109,9 @@ export default function RecapGrid({ data, drivers }: Props) {
               <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
                 {fmt(dt.total)}
               </td>
+              <td className={`border border-border px-2 py-1 text-right font-bold ${dt.totalNotReturned > 0 ? "text-destructive" : ""}`}>
+                {dt.totalNotReturned > 0 ? fmt(dt.totalNotReturned) : "—"}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -119,6 +131,9 @@ export default function RecapGrid({ data, drivers }: Props) {
             <td className="border border-border px-2 py-1.5 text-right">{fmt(grandTotals.especes)}</td>
             <td className="border border-border px-2 py-1.5 text-right">{fmt(grandTotals.cb)}</td>
             <td className="border border-border px-2 py-1.5 text-right">{fmt(grandTotals.total)}</td>
+            <td className={`border border-border px-2 py-1.5 text-right ${grandTotals.notReturned > 0 ? "text-destructive" : ""}`}>
+              {grandTotals.notReturned > 0 ? fmt(grandTotals.notReturned) : "—"}
+            </td>
           </tr>
         </tfoot>
       </table>
