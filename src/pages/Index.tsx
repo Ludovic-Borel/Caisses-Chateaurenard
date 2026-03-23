@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
-import { MonthData, SavedMonth, MONTH_NAMES } from "@/lib/types";
-import { loadCurrentMonth, saveCurrentMonth, archiveMonth, loadArchives, deleteArchive } from "@/lib/storage";
+import { MonthData, SavedMonth, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
+import { loadCurrentMonth, saveCurrentMonth, archiveMonth, loadArchives, deleteArchive, loadDrivers, saveDrivers } from "@/lib/storage";
 import RevenueGrid from "@/components/RevenueGrid";
+import RecapGrid from "@/components/RecapGrid";
+import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import ArchiveList from "@/components/ArchiveList";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Archive, X } from "lucide-react";
+import { Save, RotateCcw, Archive } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 
 function createEmptyMonth(year: number, month: number): MonthData {
-  return { year, month, days: {} };
+  return { year, month, drivers: {}, days: {} };
 }
 
 export default function Index() {
@@ -24,16 +26,39 @@ export default function Index() {
     const saved = loadCurrentMonth();
     return saved || createEmptyMonth(now.getFullYear(), now.getMonth());
   });
+  const [drivers, setDrivers] = useState<string[]>(() => loadDrivers());
+  const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
   const [archives, setArchives] = useState<SavedMonth[]>(() => loadArchives());
   const [viewingArchive, setViewingArchive] = useState<SavedMonth | null>(null);
 
-  useEffect(() => {
-    saveCurrentMonth(data);
-  }, [data]);
+  useEffect(() => { saveCurrentMonth(data); }, [data]);
+  useEffect(() => { saveDrivers(drivers); }, [drivers]);
 
   const handleMonthChange = useCallback((year: number, month: number) => {
     setData(createEmptyMonth(year, month));
   }, []);
+
+  const handleDriverDataChange = useCallback((driver: string, driverData: DriverMonthData) => {
+    setData((prev) => ({
+      ...prev,
+      drivers: { ...prev.drivers, [driver]: driverData },
+    }));
+  }, []);
+
+  const handleAddDriver = useCallback((name: string) => {
+    setDrivers((prev) => [...prev, name].sort());
+    toast.success(`Chauffeur ${name} ajouté`);
+  }, []);
+
+  const handleRemoveDriver = useCallback((name: string) => {
+    setDrivers((prev) => prev.filter((d) => d !== name));
+    setData((prev) => {
+      const { [name]: _, ...rest } = prev.drivers;
+      return { ...prev, drivers: rest };
+    });
+    if (selectedDriver === name) setSelectedDriver(null);
+    toast.success(`Chauffeur ${name} supprimé`);
+  }, [selectedDriver]);
 
   const handleSaveAndArchive = useCallback(() => {
     archiveMonth(data);
@@ -46,6 +71,7 @@ export default function Index() {
       ? createEmptyMonth(data.year + 1, 0)
       : createEmptyMonth(data.year, data.month + 1);
     setData(next);
+    setSelectedDriver(null);
     toast.info(`Nouveau mois : ${MONTH_NAMES[next.month]} ${next.year}`);
   }, [data]);
 
@@ -55,33 +81,57 @@ export default function Index() {
     toast.success("Archive supprimée");
   }, []);
 
+  const daysInMonth = getDaysInMonth(data.year, data.month);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="bg-primary text-primary-foreground px-6 py-4 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight">📊 Recettes Lignes</h1>
-            <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par ligne</p>
+            <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne</p>
           </div>
           <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
         </div>
       </header>
 
-      {/* Actions */}
-      <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-3">
+      <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap gap-3">
         <Button onClick={handleSaveAndArchive} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <Save className="h-4 w-4 mr-2" /> Sauvegarder & Archiver ce mois
+          <Save className="h-4 w-4 mr-2" /> Sauvegarder & Archiver
         </Button>
         <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" /> Mois suivant (remise à zéro)
+          <RotateCcw className="h-4 w-4 mr-2" /> Mois suivant (RAZ)
         </Button>
       </div>
 
-      {/* Grid */}
-      <main className="max-w-7xl mx-auto px-6 pb-8">
-        <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-          <RevenueGrid data={data} onChange={setData} />
+      <main className="max-w-[1600px] mx-auto px-6 pb-8">
+        <div className="flex gap-6">
+          {/* Left: Driver list */}
+          <div className="w-64 flex-shrink-0">
+            <DriverList
+              drivers={drivers}
+              selectedDriver={selectedDriver}
+              onSelect={setSelectedDriver}
+              onAddDriver={handleAddDriver}
+              onRemoveDriver={handleRemoveDriver}
+            />
+          </div>
+
+          {/* Right: Grid */}
+          <div className="flex-1 min-w-0">
+            <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+              {selectedDriver === null ? (
+                <RecapGrid data={data} drivers={drivers} />
+              ) : (
+                <RevenueGrid
+                  title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
+                  data={data.drivers[selectedDriver] || { days: {} }}
+                  daysInMonth={daysInMonth}
+                  onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Archives */}
@@ -97,7 +147,6 @@ export default function Index() {
         </div>
       </main>
 
-      {/* Archive Viewer Dialog */}
       <Dialog open={!!viewingArchive} onOpenChange={() => setViewingArchive(null)}>
         <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
           <DialogHeader>
@@ -106,7 +155,7 @@ export default function Index() {
             </DialogTitle>
           </DialogHeader>
           {viewingArchive && (
-            <RevenueGrid data={viewingArchive.data} onChange={() => {}} readOnly />
+            <RecapGrid data={viewingArchive.data} drivers={drivers} />
           )}
         </DialogContent>
       </Dialog>

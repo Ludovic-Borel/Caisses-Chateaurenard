@@ -1,24 +1,25 @@
 import { useCallback } from "react";
-import { CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, MonthData, MONTH_NAMES } from "@/lib/types";
+import { CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, DriverMonthData, MONTH_NAMES } from "@/lib/types";
 
 interface Props {
-  data: MonthData;
-  onChange: (data: MonthData) => void;
+  data: DriverMonthData;
+  daysInMonth: number;
+  title?: string;
+  onChange?: (data: DriverMonthData) => void;
   readOnly?: boolean;
 }
 
-export default function RevenueGrid({ data, onChange, readOnly = false }: Props) {
-  const daysCount = getDaysInMonth(data.year, data.month);
-
+export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
   const getValue = (day: number, cat: string, pt: string): number => {
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
   };
 
   const setValue = useCallback(
     (day: number, cat: string, pt: string, value: number) => {
+      if (!onChange) return;
       const key = getCellKey(cat as any, pt as any);
       const dayEntry = { ...(data.days[day] || {}), [key]: value };
-      onChange({ ...data, days: { ...data.days, [day]: dayEntry } });
+      onChange({ days: { ...data.days, [day]: dayEntry } });
     },
     [data, onChange]
   );
@@ -31,35 +32,28 @@ export default function RevenueGrid({ data, onChange, readOnly = false }: Props)
 
   const getColumnTotal = (cat: string, pt: string): number => {
     let total = 0;
-    for (let d = 1; d <= daysCount; d++) {
-      total += getValue(d, cat, pt);
-    }
+    for (let d = 1; d <= daysInMonth; d++) total += getValue(d, cat, pt);
     return total;
   };
 
-  const getCategoryTotal = (cat: string): number => {
-    return PAYMENT_TYPES.reduce((s, pt) => s + getColumnTotal(cat, pt), 0);
-  };
-
   const getGrandTotal = (): number => {
-    return CATEGORIES.reduce((s, cat) => s + getCategoryTotal(cat), 0);
+    return CATEGORIES.reduce(
+      (s, cat) => s + PAYMENT_TYPES.reduce((s2, pt) => s2 + getColumnTotal(cat, pt), 0),
+      0
+    );
   };
 
-  const getTotalEspeces = (): number => {
-    return CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "especes"), 0);
-  };
+  const getTotalEspeces = (): number =>
+    CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "especes"), 0);
 
-  const getTotalCB = (): number => {
-    return CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "cb"), 0);
-  };
+  const getTotalCB = (): number =>
+    CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "cb"), 0);
 
   const fmt = (v: number) => (v ? v.toFixed(2) + " €" : "");
 
   return (
     <div className="overflow-x-auto">
-      <h2 className="text-lg font-bold text-primary mb-3">
-        Recettes — {MONTH_NAMES[data.month]} {data.year}
-      </h2>
+      {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
@@ -87,7 +81,7 @@ export default function RevenueGrid({ data, onChange, readOnly = false }: Props)
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: daysCount }, (_, i) => i + 1).map((day) => (
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
             <tr key={day} className="hover:bg-muted/50 transition-colors">
               <td className="border border-border px-2 py-0.5 font-medium text-muted-foreground">
                 {day}
@@ -129,9 +123,7 @@ export default function RevenueGrid({ data, onChange, readOnly = false }: Props)
                 </td>
               ))
             )}
-            <td className="border border-border px-2 py-1.5 text-right">
-              {fmt(getGrandTotal())}
-            </td>
+            <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
           </tr>
           <tr className="bg-secondary font-semibold text-sm">
             <td className="border border-border px-2 py-2" colSpan={3}>
