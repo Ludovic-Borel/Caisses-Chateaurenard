@@ -14,12 +14,33 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
   };
 
+  const getNrKey = (day: number, cat: string, pt: string) => `${day}_${cat}_${pt}`;
+
+  const isNotReturned = (day: number, cat: string, pt: string): boolean => {
+    return !!data.notReturned?.[getNrKey(day, cat, pt)];
+  };
+
+  const toggleNotReturned = useCallback(
+    (day: number, cat: string, pt: string) => {
+      if (!onChange || readOnly) return;
+      const key = getNrKey(day, cat, pt);
+      const nr = { ...(data.notReturned || {}) };
+      if (nr[key]) {
+        delete nr[key];
+      } else {
+        nr[key] = true;
+      }
+      onChange({ ...data, notReturned: nr });
+    },
+    [data, onChange, readOnly]
+  );
+
   const setValue = useCallback(
     (day: number, cat: string, pt: string, value: number) => {
       if (!onChange) return;
       const key = getCellKey(cat as any, pt as any);
       const dayEntry = { ...(data.days[day] || {}), [key]: value };
-      onChange({ days: { ...data.days, [day]: dayEntry } });
+      onChange({ ...data, days: { ...data.days, [day]: dayEntry } });
     },
     [data, onChange]
   );
@@ -87,25 +108,49 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 {day}
               </td>
               {CATEGORIES.map((cat) =>
-                PAYMENT_TYPES.map((pt) => (
-                  <td
-                    key={`${day}-${cat}-${pt}`}
-                    className={`border border-border px-0 py-0 ${pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50"}`}
-                  >
-                    {readOnly ? (
-                      <span className="block px-1 py-0.5 text-right">{fmt(getValue(day, cat, pt))}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={getValue(day, cat, pt) || ""}
-                        onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
-                      />
-                    )}
-                  </td>
-                ))
+                PAYMENT_TYPES.map((pt) => {
+                  const val = getValue(day, cat, pt);
+                  const nr = isNotReturned(day, cat, pt);
+                  return (
+                    <td
+                      key={`${day}-${cat}-${pt}`}
+                      className={`border border-border px-0 py-0 ${pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50"}`}
+                    >
+                      <div className="flex items-center">
+                        {readOnly ? (
+                          <span className={`block px-1 py-0.5 text-right w-full ${nr ? "text-destructive font-bold" : ""}`}>
+                            {fmt(val)}
+                          </span>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${nr ? "text-destructive font-bold" : ""}`}
+                              value={val || ""}
+                              onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
+                            />
+                            {val > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleNotReturned(day, cat, pt)}
+                                className={`shrink-0 w-4 h-4 mr-0.5 rounded-full text-[8px] leading-none font-bold border ${
+                                  nr
+                                    ? "bg-destructive text-destructive-foreground border-destructive"
+                                    : "bg-muted text-muted-foreground border-border hover:bg-destructive/20"
+                                }`}
+                                title={nr ? "Marquer comme rendu" : "Marquer comme non rendu"}
+                              >
+                                {nr ? "✓" : "!"}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })
               )}
               <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
                 {fmt(getDayTotal(day))}
