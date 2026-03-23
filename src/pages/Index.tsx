@@ -102,11 +102,11 @@ export default function Index() {
             <h1 className="text-xl font-bold tracking-tight">📊 Recettes Lignes</h1>
             <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne</p>
           </div>
-          <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap gap-3">
+      <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center flex-wrap gap-3">
+        <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
         <Button onClick={handleSaveAndArchive} className="bg-accent hover:bg-accent/90 text-accent-foreground">
           <Save className="h-4 w-4 mr-2" /> Sauvegarder & Archiver
         </Button>

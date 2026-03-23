@@ -76,7 +76,7 @@ export default function RecapGrid({ data, drivers }: Props) {
           </tr>
         </thead>
         <tbody>
-          {(activeDrivers.length > 0 ? activeDrivers : driverTotals.slice(0, 10)).map((dt) => (
+          {driverTotals.map((dt) => (
             <tr key={dt.driver} className="hover:bg-muted/50 transition-colors">
               <td className="border border-border px-3 py-1 font-medium text-foreground">
                 {dt.driver}
