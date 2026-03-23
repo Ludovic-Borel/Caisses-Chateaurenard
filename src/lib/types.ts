@@ -10,6 +10,7 @@ export interface DayEntry {
 // Per-driver monthly data
 export interface DriverMonthData {
   days: Record<number, DayEntry>; // day 1-31
+  notReturned?: Record<string, boolean>; // key = `${day}_${category}_${paymentType}`
 }
 
 // Full month with all drivers
