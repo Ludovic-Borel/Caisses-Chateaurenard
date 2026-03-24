@@ -8,7 +8,7 @@ import MonthSelector from "@/components/MonthSelector";
 import ArchiveList from "@/components/ArchiveList";
 import StatsPanel from "@/components/StatsPanel";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Archive } from "lucide-react";
+import { Save, RotateCcw, Archive, BarChart3, TableProperties } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
