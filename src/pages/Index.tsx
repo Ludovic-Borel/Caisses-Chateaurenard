@@ -31,6 +31,9 @@ export default function Index() {
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
   const [archives, setArchives] = useState<SavedMonth[]>(() => loadArchives());
   const [viewingArchive, setViewingArchive] = useState<SavedMonth | null>(null);
+  const [editingArchive, setEditingArchive] = useState<SavedMonth | null>(null);
+  const [editingArchiveData, setEditingArchiveData] = useState<MonthData | null>(null);
+  const [editingArchiveDriver, setEditingArchiveDriver] = useState<string | null>(null);
 
   useEffect(() => { saveCurrentMonth(data); }, [data]);
   useEffect(() => { saveDrivers(drivers); }, [drivers]);
