@@ -75,11 +75,14 @@ export default function Index() {
     toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
   }, [selectedDriver]);
 
-  const handleSaveAndArchive = useCallback(() => {
-    archiveMonth(data);
-    setArchives(loadArchives());
-    toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} archivé avec succès !`);
-  }, [data]);
+  const handleSaveAndArchive = useCallback(async () => {
+    const saved = await saveWithFilePicker(data, drivers);
+    if (saved) {
+      archiveMonth(data);
+      setArchives(loadArchives());
+      toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} archivé et exporté !`);
+    }
+  }, [data, drivers]);
 
   const handleReset = useCallback(() => {
     const next = data.month === 11
