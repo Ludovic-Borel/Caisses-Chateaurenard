@@ -95,6 +95,30 @@ export default function Index() {
     toast.success("Archive supprimée");
   }, []);
 
+  const handleEditArchive = useCallback((archive: SavedMonth) => {
+    setEditingArchive(archive);
+    setEditingArchiveData({ ...archive.data });
+    setEditingArchiveDriver(null);
+  }, []);
+
+  const handleEditArchiveDriverData = useCallback((driver: string, driverData: DriverMonthData) => {
+    setEditingArchiveData((prev) => prev ? {
+      ...prev,
+      drivers: { ...prev.drivers, [driver]: driverData },
+    } : prev);
+  }, []);
+
+  const handleSaveEditedArchive = useCallback(() => {
+    if (editingArchive && editingArchiveData) {
+      updateArchive(editingArchive.id, editingArchiveData);
+      setArchives(loadArchives());
+      setEditingArchive(null);
+      setEditingArchiveData(null);
+      setEditingArchiveDriver(null);
+      toast.success("Archive mise à jour");
+    }
+  }, [editingArchive, editingArchiveData]);
+
   const daysInMonth = getDaysInMonth(data.year, data.month);
 
   return (
