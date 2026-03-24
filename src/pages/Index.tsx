@@ -195,6 +195,7 @@ export default function Index() {
           <ArchiveList
             archives={archives}
             onView={setViewingArchive}
+            onEdit={handleEditArchive}
             onDelete={handleDeleteArchive}
           />
         </div>
