@@ -8,7 +8,7 @@ import MonthSelector from "@/components/MonthSelector";
 import ArchiveList from "@/components/ArchiveList";
 import StatsPanel from "@/components/StatsPanel";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Archive } from "lucide-react";
+import { Save, RotateCcw, Archive, BarChart3, TableProperties } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -107,6 +107,18 @@ export default function Index() {
 
       <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center flex-wrap gap-3">
         <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
+        <Button
+          variant={selectedDriver === null ? "default" : "outline"}
+          onClick={() => setSelectedDriver(null)}
+        >
+          <TableProperties className="h-4 w-4 mr-2" /> Récap global
+        </Button>
+        <Button
+          variant={selectedDriver === "__stats__" ? "default" : "outline"}
+          onClick={() => setSelectedDriver("__stats__")}
+        >
+          <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
+        </Button>
         <Button onClick={handleSaveAndArchive} className="bg-accent hover:bg-accent/90 text-accent-foreground">
           <Save className="h-4 w-4 mr-2" /> Sauvegarder & Archiver
         </Button>
