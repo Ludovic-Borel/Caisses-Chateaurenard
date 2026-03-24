@@ -48,3 +48,10 @@ export function deleteArchive(id: string): void {
   const archives = loadArchives().filter((a) => a.id !== id);
   localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives));
 }
+
+export function updateArchive(id: string, data: MonthData): void {
+  const archives = loadArchives().map((a) =>
+    a.id === id ? { ...a, data, savedAt: new Date().toISOString() } : a
+  );
+  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives));
+}

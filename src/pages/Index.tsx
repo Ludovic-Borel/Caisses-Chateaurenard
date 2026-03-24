@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { MonthData, SavedMonth, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadCurrentMonth, saveCurrentMonth, archiveMonth, loadArchives, deleteArchive, loadDrivers, saveDrivers } from "@/lib/storage";
+import { loadCurrentMonth, saveCurrentMonth, archiveMonth, loadArchives, deleteArchive, updateArchive, loadDrivers, saveDrivers } from "@/lib/storage";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
@@ -31,6 +31,9 @@ export default function Index() {
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
   const [archives, setArchives] = useState<SavedMonth[]>(() => loadArchives());
   const [viewingArchive, setViewingArchive] = useState<SavedMonth | null>(null);
+  const [editingArchive, setEditingArchive] = useState<SavedMonth | null>(null);
+  const [editingArchiveData, setEditingArchiveData] = useState<MonthData | null>(null);
+  const [editingArchiveDriver, setEditingArchiveDriver] = useState<string | null>(null);
 
   useEffect(() => { saveCurrentMonth(data); }, [data]);
   useEffect(() => { saveDrivers(drivers); }, [drivers]);
@@ -91,6 +94,30 @@ export default function Index() {
     setArchives(loadArchives());
     toast.success("Archive supprimée");
   }, []);
+
+  const handleEditArchive = useCallback((archive: SavedMonth) => {
+    setEditingArchive(archive);
+    setEditingArchiveData({ ...archive.data });
+    setEditingArchiveDriver(null);
+  }, []);
+
+  const handleEditArchiveDriverData = useCallback((driver: string, driverData: DriverMonthData) => {
+    setEditingArchiveData((prev) => prev ? {
+      ...prev,
+      drivers: { ...prev.drivers, [driver]: driverData },
+    } : prev);
+  }, []);
+
+  const handleSaveEditedArchive = useCallback(() => {
+    if (editingArchive && editingArchiveData) {
+      updateArchive(editingArchive.id, editingArchiveData);
+      setArchives(loadArchives());
+      setEditingArchive(null);
+      setEditingArchiveData(null);
+      setEditingArchiveDriver(null);
+      toast.success("Archive mise à jour");
+    }
+  }, [editingArchive, editingArchiveData]);
 
   const daysInMonth = getDaysInMonth(data.year, data.month);
 
@@ -168,6 +195,7 @@ export default function Index() {
           <ArchiveList
             archives={archives}
             onView={setViewingArchive}
+            onEdit={handleEditArchive}
             onDelete={handleDeleteArchive}
           />
         </div>
@@ -182,6 +210,54 @@ export default function Index() {
           </DialogHeader>
           {viewingArchive && (
             <RecapGrid data={viewingArchive.data} drivers={drivers} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingArchive} onOpenChange={() => { setEditingArchive(null); setEditingArchiveData(null); setEditingArchiveDriver(null); }}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingArchive && `Éditer — Recettes Lignes ${MONTH_NAMES[editingArchive.month]} ${editingArchive.year}`}
+            </DialogTitle>
+          </DialogHeader>
+          {editingArchiveData && (
+            <div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                  variant={editingArchiveDriver === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditingArchiveDriver(null)}
+                >
+                  <TableProperties className="h-3.5 w-3.5 mr-1" /> Récap
+                </Button>
+                {drivers.map((d) => (
+                  <Button
+                    key={d}
+                    variant={editingArchiveDriver === d ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditingArchiveDriver(d)}
+                  >
+                    {d}
+                  </Button>
+                ))}
+              </div>
+              {editingArchiveDriver === null ? (
+                <RecapGrid data={editingArchiveData} drivers={drivers} />
+              ) : (
+                <RevenueGrid
+                  title={`Recettes — ${editingArchiveDriver} — ${MONTH_NAMES[editingArchive!.month]} ${editingArchive!.year}`}
+                  data={editingArchiveData.drivers[editingArchiveDriver] || { days: {} }}
+                  daysInMonth={getDaysInMonth(editingArchive!.year, editingArchive!.month)}
+                  onChange={(driverData) => handleEditArchiveDriverData(editingArchiveDriver, driverData)}
+                />
+              )}
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleSaveEditedArchive}>
+                  <Save className="h-4 w-4 mr-2" /> Enregistrer les modifications
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

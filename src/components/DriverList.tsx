@@ -71,30 +71,6 @@ export default function DriverList({ drivers, selectedDriver, onSelect, onAddDri
         </div>
       )}
 
-      {/* Récap button */}
-      <button
-        onClick={() => onSelect(null)}
-        className={`w-full text-left px-4 py-2 text-sm font-semibold border-b border-border transition-colors ${
-          selectedDriver === null
-            ? "bg-primary/10 text-primary"
-            : "hover:bg-muted text-foreground"
-        }`}
-      >
-        📊 Récapitulatif Global
-      </button>
-
-      {/* Stats button */}
-      <button
-        onClick={() => onSelect("__stats__")}
-        className={`w-full text-left px-4 py-2 text-sm font-semibold border-b border-border transition-colors ${
-          selectedDriver === "__stats__"
-            ? "bg-primary/10 text-primary"
-            : "hover:bg-muted text-foreground"
-        }`}
-      >
-        📈 Statistiques
-      </button>
-
       <div className="max-h-[55vh] overflow-y-auto">
         {drivers.map((driver) => (
           <div
