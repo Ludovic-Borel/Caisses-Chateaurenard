@@ -213,6 +213,54 @@ export default function Index() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editingArchive} onOpenChange={() => { setEditingArchive(null); setEditingArchiveData(null); setEditingArchiveDriver(null); }}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingArchive && `Éditer — Recettes Lignes ${MONTH_NAMES[editingArchive.month]} ${editingArchive.year}`}
+            </DialogTitle>
+          </DialogHeader>
+          {editingArchiveData && (
+            <div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                  variant={editingArchiveDriver === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditingArchiveDriver(null)}
+                >
+                  <TableProperties className="h-3.5 w-3.5 mr-1" /> Récap
+                </Button>
+                {drivers.map((d) => (
+                  <Button
+                    key={d}
+                    variant={editingArchiveDriver === d ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditingArchiveDriver(d)}
+                  >
+                    {d}
+                  </Button>
+                ))}
+              </div>
+              {editingArchiveDriver === null ? (
+                <RecapGrid data={editingArchiveData} drivers={drivers} />
+              ) : (
+                <RevenueGrid
+                  title={`Recettes — ${editingArchiveDriver} — ${MONTH_NAMES[editingArchive!.month]} ${editingArchive!.year}`}
+                  data={editingArchiveData.drivers[editingArchiveDriver] || { days: {} }}
+                  daysInMonth={getDaysInMonth(editingArchive!.year, editingArchive!.month)}
+                  onChange={(driverData) => handleEditArchiveDriverData(editingArchiveDriver, driverData)}
+                />
+              )}
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleSaveEditedArchive}>
+                  <Save className="h-4 w-4 mr-2" /> Enregistrer les modifications
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
