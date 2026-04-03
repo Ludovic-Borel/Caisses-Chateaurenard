@@ -11,7 +11,7 @@ interface Props {
 
 export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
-  const [hoverCat, setHoverCat] = useState<string | null>(null);
+  const [hoverCol, setHoverCol] = useState<string | null>(null);
 
   const getValue = (day: number, cat: string, pt: string): number => {
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
