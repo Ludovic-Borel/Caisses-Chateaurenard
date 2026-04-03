@@ -88,8 +88,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
               <th
                 key={cat}
                 colSpan={2}
-                className="border border-border px-2 py-1.5 text-center transition-colors duration-150"
-                style={hoverCat === cat ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                className="border border-border px-2 py-1.5 text-center"
               >
                 {cat}
               </th>
