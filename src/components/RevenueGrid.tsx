@@ -191,7 +191,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 <td
                   key={`t-${cat}-${pt}`}
                   className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                 >
                   {fmt(getColumnTotal(cat, pt))}
                 </td>
