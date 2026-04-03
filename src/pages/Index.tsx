@@ -159,7 +159,7 @@ export default function Index() {
       </div>
 
       <main className="max-w-[1600px] mx-auto px-6 pb-8">
-        <div className="flex gap-6 items-stretch">
+        <div className="flex gap-6">
           {/* Left: Driver list */}
           <div className="w-64 flex-shrink-0">
             <DriverList
