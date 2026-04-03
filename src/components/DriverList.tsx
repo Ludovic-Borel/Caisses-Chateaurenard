@@ -71,7 +71,7 @@ export default function DriverList({ drivers, selectedDriver, onSelect, onAddDri
         </div>
       )}
 
-      <div className="max-h-[55vh] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {drivers.map((driver) => (
           <div
             key={driver}
