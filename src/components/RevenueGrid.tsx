@@ -102,14 +102,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 <th
                   key={`${cat}-e`}
                   className="border border-border px-1 py-1 text-center bg-grid-especes text-foreground font-medium transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_especes` ? { backgroundColor: hlBg } : undefined}
                 >
                   Esp.
                 </th>
                 <th
                   key={`${cat}-c`}
                   className="border border-border px-1 py-1 text-center bg-grid-cb text-foreground font-medium transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_cb` ? { backgroundColor: hlBg } : undefined}
                 >
                   CB
                 </th>
