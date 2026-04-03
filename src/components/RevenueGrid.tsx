@@ -78,7 +78,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
   const hlBg = "hsl(var(--grid-highlight))";
 
   return (
-    <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCat(null); }}>
+    <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCol(null); }}>
       {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
