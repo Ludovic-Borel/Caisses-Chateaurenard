@@ -43,7 +43,7 @@ export default function DriverList({ drivers, selectedDriver, onSelect, onAddDri
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col h-full">
       <div className="bg-grid-header text-grid-header-foreground px-4 py-2.5 flex items-center justify-between">
         <span className="font-semibold text-sm flex items-center gap-2">
           <Users className="h-4 w-4" /> Chauffeurs ({drivers.length})
