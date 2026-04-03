@@ -11,7 +11,7 @@ interface Props {
 
 export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
-  const [hoverCat, setHoverCat] = useState<string | null>(null);
+  const [hoverCol, setHoverCol] = useState<string | null>(null);
 
   const getValue = (day: number, cat: string, pt: string): number => {
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
@@ -78,7 +78,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
   const hlBg = "hsl(var(--grid-highlight))";
 
   return (
-    <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCat(null); }}>
+    <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCol(null); }}>
       {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
@@ -88,8 +88,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
               <th
                 key={cat}
                 colSpan={2}
-                className="border border-border px-2 py-1.5 text-center transition-colors duration-150"
-                style={hoverCat === cat ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                className="border border-border px-2 py-1.5 text-center"
               >
                 {cat}
               </th>
@@ -103,14 +102,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 <th
                   key={`${cat}-e`}
                   className="border border-border px-1 py-1 text-center bg-grid-especes text-foreground font-medium transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_especes` ? { backgroundColor: hlBg } : undefined}
                 >
                   Esp.
                 </th>
                 <th
                   key={`${cat}-c`}
                   className="border border-border px-1 py-1 text-center bg-grid-cb text-foreground font-medium transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_cb` ? { backgroundColor: hlBg } : undefined}
                 >
                   CB
                 </th>
@@ -132,13 +131,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
-                  const isHighlighted = hoverDay === day || hoverCat === cat;
+                  const colKey = `${cat}_${pt}`;
+                  const isHighlighted = hoverDay === day || hoverCol === colKey;
                   return (
                     <td
                       key={`${day}-${cat}-${pt}`}
                       className={`border border-border px-0 py-0 transition-colors duration-150 ${pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50"}`}
                       style={isHighlighted ? { backgroundColor: hlBg } : undefined}
-                      onMouseEnter={() => { setHoverDay(day); setHoverCat(cat); }}
+                      onMouseEnter={() => { setHoverDay(day); setHoverCol(colKey); }}
                     >
                       <div className="flex items-center">
                         {readOnly ? (
@@ -154,7 +154,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                               className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${nr ? "text-destructive font-bold" : ""}`}
                               value={val || ""}
                               onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
-                              onFocus={() => { setHoverDay(day); setHoverCat(cat); }}
+                              onFocus={() => { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }}
                             />
                             {val > 0 && (
                               <button
@@ -191,7 +191,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 <td
                   key={`t-${cat}-${pt}`}
                   className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
-                  style={hoverCat === cat ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                 >
                   {fmt(getColumnTotal(cat, pt))}
                 </td>
