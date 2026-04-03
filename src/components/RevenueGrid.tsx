@@ -154,7 +154,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                               className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${nr ? "text-destructive font-bold" : ""}`}
                               value={val || ""}
                               onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
-                              onFocus={() => { setHoverDay(day); setHoverCat(cat); }}
+                              onFocus={() => { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }}
                             />
                             {val > 0 && (
                               <button
