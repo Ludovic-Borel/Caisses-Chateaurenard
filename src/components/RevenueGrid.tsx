@@ -131,13 +131,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
-                  const isHighlighted = hoverDay === day || hoverCat === cat;
+                  const colKey = `${cat}_${pt}`;
+                  const isHighlighted = hoverDay === day || hoverCol === colKey;
                   return (
                     <td
                       key={`${day}-${cat}-${pt}`}
                       className={`border border-border px-0 py-0 transition-colors duration-150 ${pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50"}`}
                       style={isHighlighted ? { backgroundColor: hlBg } : undefined}
-                      onMouseEnter={() => { setHoverDay(day); setHoverCat(cat); }}
+                      onMouseEnter={() => { setHoverDay(day); setHoverCol(colKey); }}
                     >
                       <div className="flex items-center">
                         {readOnly ? (
