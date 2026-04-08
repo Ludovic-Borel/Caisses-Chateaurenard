@@ -1,25 +1,18 @@
 import { MonthData, SavedMonth, DEFAULT_DRIVERS } from "./types";
 
-const CURRENT_KEY = "recettes_current_v2";
-const ARCHIVE_KEY = "recettes_archive_v2";
-const DRIVERS_KEY = "recettes_drivers";
+const MONTH_KEY_PREFIX = "recettes_month_";
 
-export function loadDrivers(): string[] {
-  const raw = localStorage.getItem(DRIVERS_KEY);
-  return raw ? JSON.parse(raw) : DEFAULT_DRIVERS;
+function monthKey(year: number, month: number): string {
+  return `${MONTH_KEY_PREFIX}${year}_${month}`;
 }
 
-export function saveDrivers(drivers: string[]): void {
-  localStorage.setItem(DRIVERS_KEY, JSON.stringify(drivers));
-}
-
-export function loadCurrentMonth(): MonthData | null {
-  const raw = localStorage.getItem(CURRENT_KEY);
+export function loadMonth(year: number, month: number): MonthData | null {
+  const raw = localStorage.getItem(monthKey(year, month));
   return raw ? JSON.parse(raw) : null;
 }
 
-export function saveCurrentMonth(data: MonthData): void {
-  localStorage.setItem(CURRENT_KEY, JSON.stringify(data));
+export function saveMonth(data: MonthData): void {
+  localStorage.setItem(monthKey(data.year, data.month), JSON.stringify(data));
 }
 
 export function archiveMonth(data: MonthData): void {
