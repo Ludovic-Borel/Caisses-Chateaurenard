@@ -87,7 +87,7 @@ export default function RecapGrid({ data, drivers }: Props) {
         <tbody>
           {driverTotals.map((dt) => (
             <tr key={dt.driver} className="hover:bg-muted/50 transition-colors">
-              <td className="border border-border px-3 py-1 font-medium text-foreground">
+              <td className={`border border-border px-3 py-1 font-medium ${dt.totalNotReturned > 0 ? "bg-destructive/15 text-destructive font-bold" : "text-foreground"}`}>
                 {dt.driver}
               </td>
               {CATEGORIES.map((cat) => (

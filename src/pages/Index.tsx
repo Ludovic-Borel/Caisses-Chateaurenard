@@ -1,22 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { MonthData, SavedMonth, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadArchives, deleteArchive, updateArchive, loadDrivers, saveDrivers } from "@/lib/storage";
-import { saveWithFilePicker, getLastSaveLocation } from "@/lib/export";
+import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers } from "@/lib/storage";
+import { saveWithFilePicker } from "@/lib/export";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
-import ArchiveList from "@/components/ArchiveList";
 import StatsPanel from "@/components/StatsPanel";
 import { Button } from "@/components/ui/button";
-import { Save, RotateCcw, Archive, BarChart3, TableProperties } from "lucide-react";
+import { Save, BarChart3, TableProperties } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 function createEmptyMonth(year: number, month: number): MonthData {
   return { year, month, drivers: {}, days: {} };
@@ -29,11 +22,6 @@ export default function Index() {
   });
   const [drivers, setDrivers] = useState<string[]>(() => loadDrivers());
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
-  const [archives, setArchives] = useState<SavedMonth[]>(() => loadArchives());
-  const [viewingArchive, setViewingArchive] = useState<SavedMonth | null>(null);
-  const [editingArchive, setEditingArchive] = useState<SavedMonth | null>(null);
-  const [editingArchiveData, setEditingArchiveData] = useState<MonthData | null>(null);
-  const [editingArchiveDriver, setEditingArchiveDriver] = useState<string | null>(null);
 
   useEffect(() => { saveMonth(data); }, [data]);
   useEffect(() => { saveDrivers(drivers); }, [drivers]);
@@ -82,45 +70,6 @@ export default function Index() {
     }
   }, [data, drivers]);
 
-  const handleReset = useCallback(() => {
-    const next = data.month === 11
-      ? createEmptyMonth(data.year + 1, 0)
-      : createEmptyMonth(data.year, data.month + 1);
-    setData(next);
-    setSelectedDriver(null);
-    toast.info(`Nouveau mois : ${MONTH_NAMES[next.month]} ${next.year}`);
-  }, [data]);
-
-  const handleDeleteArchive = useCallback((id: string) => {
-    deleteArchive(id);
-    setArchives(loadArchives());
-    toast.success("Archive supprimée");
-  }, []);
-
-  const handleEditArchive = useCallback((archive: SavedMonth) => {
-    setEditingArchive(archive);
-    setEditingArchiveData({ ...archive.data });
-    setEditingArchiveDriver(null);
-  }, []);
-
-  const handleEditArchiveDriverData = useCallback((driver: string, driverData: DriverMonthData) => {
-    setEditingArchiveData((prev) => prev ? {
-      ...prev,
-      drivers: { ...prev.drivers, [driver]: driverData },
-    } : prev);
-  }, []);
-
-  const handleSaveEditedArchive = useCallback(() => {
-    if (editingArchive && editingArchiveData) {
-      updateArchive(editingArchive.id, editingArchiveData);
-      setArchives(loadArchives());
-      setEditingArchive(null);
-      setEditingArchiveData(null);
-      setEditingArchiveDriver(null);
-      toast.success("Archive mise à jour");
-    }
-  }, [editingArchive, editingArchiveData]);
-
   const daysInMonth = getDaysInMonth(data.year, data.month);
 
   return (
@@ -151,14 +100,10 @@ export default function Index() {
         <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
           <Save className="h-4 w-4 mr-2" /> Exporter Excel
         </Button>
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" /> Mois suivant (RAZ)
-        </Button>
       </div>
 
       <main className="max-w-[1600px] mx-auto px-6 pb-8">
         <div className="flex gap-6">
-          {/* Left: Driver list */}
           <div className="w-64 flex-shrink-0">
             <DriverList
               drivers={drivers}
@@ -170,11 +115,10 @@ export default function Index() {
             />
           </div>
 
-          {/* Right: Grid or Stats */}
           <div className="flex-1 min-w-0">
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
               {selectedDriver === "__stats__" ? (
-                <StatsPanel currentData={data} archives={archives} drivers={drivers} />
+                <StatsPanel currentData={data} archives={[]} drivers={drivers} />
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
@@ -188,81 +132,7 @@ export default function Index() {
             </div>
           </div>
         </div>
-
-        {/* Archives */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Archive className="h-5 w-5 text-primary" /> Mois archivés
-          </h3>
-          <ArchiveList
-            archives={archives}
-            onView={setViewingArchive}
-            onEdit={handleEditArchive}
-            onDelete={handleDeleteArchive}
-          />
-        </div>
       </main>
-
-      <Dialog open={!!viewingArchive} onOpenChange={() => setViewingArchive(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {viewingArchive && `Recettes Lignes ${MONTH_NAMES[viewingArchive.month]} ${viewingArchive.year}`}
-            </DialogTitle>
-          </DialogHeader>
-          {viewingArchive && (
-            <RecapGrid data={viewingArchive.data} drivers={drivers} />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!editingArchive} onOpenChange={() => { setEditingArchive(null); setEditingArchiveData(null); setEditingArchiveDriver(null); }}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingArchive && `Éditer — Recettes Lignes ${MONTH_NAMES[editingArchive.month]} ${editingArchive.year}`}
-            </DialogTitle>
-          </DialogHeader>
-          {editingArchiveData && (
-            <div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Button
-                  variant={editingArchiveDriver === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditingArchiveDriver(null)}
-                >
-                  <TableProperties className="h-3.5 w-3.5 mr-1" /> Récap
-                </Button>
-                {drivers.map((d) => (
-                  <Button
-                    key={d}
-                    variant={editingArchiveDriver === d ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setEditingArchiveDriver(d)}
-                  >
-                    {d}
-                  </Button>
-                ))}
-              </div>
-              {editingArchiveDriver === null ? (
-                <RecapGrid data={editingArchiveData} drivers={drivers} />
-              ) : (
-                <RevenueGrid
-                  title={`Recettes — ${editingArchiveDriver} — ${MONTH_NAMES[editingArchive!.month]} ${editingArchive!.year}`}
-                  data={editingArchiveData.drivers[editingArchiveDriver] || { days: {} }}
-                  daysInMonth={getDaysInMonth(editingArchive!.year, editingArchive!.month)}
-                  onChange={(driverData) => handleEditArchiveDriverData(editingArchiveDriver, driverData)}
-                />
-              )}
-              <div className="flex justify-end mt-4">
-                <Button onClick={handleSaveEditedArchive}>
-                  <Save className="h-4 w-4 mr-2" /> Enregistrer les modifications
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
