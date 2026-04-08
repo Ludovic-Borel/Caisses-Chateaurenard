@@ -25,8 +25,7 @@ function createEmptyMonth(year: number, month: number): MonthData {
 export default function Index() {
   const now = new Date();
   const [data, setData] = useState<MonthData>(() => {
-    const saved = loadCurrentMonth();
-    return saved || createEmptyMonth(now.getFullYear(), now.getMonth());
+    return loadMonth(now.getFullYear(), now.getMonth()) || createEmptyMonth(now.getFullYear(), now.getMonth());
   });
   const [drivers, setDrivers] = useState<string[]>(() => loadDrivers());
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
@@ -36,11 +35,12 @@ export default function Index() {
   const [editingArchiveData, setEditingArchiveData] = useState<MonthData | null>(null);
   const [editingArchiveDriver, setEditingArchiveDriver] = useState<string | null>(null);
 
-  useEffect(() => { saveCurrentMonth(data); }, [data]);
+  useEffect(() => { saveMonth(data); }, [data]);
   useEffect(() => { saveDrivers(drivers); }, [drivers]);
 
   const handleMonthChange = useCallback((year: number, month: number) => {
-    setData(createEmptyMonth(year, month));
+    setData(loadMonth(year, month) || createEmptyMonth(year, month));
+    setSelectedDriver(null);
   }, []);
 
   const handleDriverDataChange = useCallback((driver: string, driverData: DriverMonthData) => {
@@ -75,12 +75,10 @@ export default function Index() {
     toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
   }, [selectedDriver]);
 
-  const handleSaveAndArchive = useCallback(async () => {
+  const handleExportExcel = useCallback(async () => {
     const saved = await saveWithFilePicker(data, drivers);
     if (saved) {
-      archiveMonth(data);
-      setArchives(loadArchives());
-      toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} archivé et exporté !`);
+      toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} exporté !`);
     }
   }, [data, drivers]);
 
@@ -150,8 +148,8 @@ export default function Index() {
         >
           <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
         </Button>
-        <Button onClick={handleSaveAndArchive} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <Save className="h-4 w-4 mr-2" /> Sauvegarder & Archiver
+        <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <Save className="h-4 w-4 mr-2" /> Exporter Excel
         </Button>
         <Button variant="outline" onClick={handleReset}>
           <RotateCcw className="h-4 w-4 mr-2" /> Mois suivant (RAZ)
