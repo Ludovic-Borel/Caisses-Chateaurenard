@@ -12,6 +12,8 @@ interface Props {
 export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverCol, setHoverCol] = useState<string | null>(null);
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const getValue = (day: number, cat: string, pt: string): number => {
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
@@ -148,13 +150,31 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                         ) : (
                           <>
                             <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${nr ? "text-destructive font-bold" : ""}`}
-                              value={val || ""}
-                              onChange={(e) => setValue(day, cat, pt, parseFloat(e.target.value) || 0)}
-                              onFocus={() => { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }}
+                              type="text"
+                              inputMode="decimal"
+                              className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${nr ? "text-destructive font-bold" : ""}`}
+                              value={editingCell === `${day}-${cat}-${pt}` ? editValue : (val ? fmt(val) : "")}
+                              onFocus={() => {
+                                setHoverDay(day); setHoverCol(`${cat}_${pt}`);
+                                setEditingCell(`${day}-${cat}-${pt}`);
+                                setEditValue(val ? val.toString().replace(".", ",") : "");
+                              }}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                  setValue(day, cat, pt, parsed);
+                                  setEditingCell(null);
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                              onBlur={() => {
+                                if (editingCell === `${day}-${cat}-${pt}`) {
+                                  const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                  setValue(day, cat, pt, parsed);
+                                  setEditingCell(null);
+                                }
+                              }}
                             />
                             {val > 0 && (
                               <button
