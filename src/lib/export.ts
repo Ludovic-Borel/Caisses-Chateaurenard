@@ -3,10 +3,23 @@ import { MonthData, CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, MONTH
 
 const SAVE_DIR_KEY = "recettes_save_dir_handle";
 
+function addSheetHeader(sheet: XLSX.WorkSheet, title: string, colCount: number): void {
+  // Row 0: Company name
+  // Row 1: Title (month/driver)
+  // Row 2: empty spacer
+  // Merge across all columns
+  if (!sheet["!merges"]) sheet["!merges"] = [];
+  sheet["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } });
+  sheet["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } });
+
+  XLSX.utils.sheet_add_aoa(sheet, [["Pastouret Rubans-Bleus"], [title], []], { origin: "A1" });
+}
+
 export function buildWorkbook(data: MonthData, drivers: string[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const monthLabel = `${MONTH_NAMES[data.month]} ${data.year}`;
+  const HEADER_ROWS = 3; // company + title + spacer
 
   // Recap sheet
   const recapRows: (string | number)[][] = [];
@@ -38,7 +51,9 @@ export function buildWorkbook(data: MonthData, drivers: string[]): XLSX.WorkBook
     recapRows.push(row);
   });
 
-  const recapSheet = XLSX.utils.aoa_to_sheet(recapRows);
+  const recapSheet = XLSX.utils.aoa_to_sheet([]);
+  addSheetHeader(recapSheet, `Récapitulatif — ${monthLabel}`, header.length);
+  XLSX.utils.sheet_add_aoa(recapSheet, recapRows, { origin: { r: HEADER_ROWS, c: 0 } });
   XLSX.utils.book_append_sheet(wb, recapSheet, "Récapitulatif");
 
   // Per-driver sheets
@@ -63,8 +78,10 @@ export function buildWorkbook(data: MonthData, drivers: string[]): XLSX.WorkBook
       rows.push(row);
     }
 
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
-    const name = driver.substring(0, 31); // Excel 31 char limit
+    const sheet = XLSX.utils.aoa_to_sheet([]);
+    addSheetHeader(sheet, `${driver} — ${monthLabel}`, h.length);
+    XLSX.utils.sheet_add_aoa(sheet, rows, { origin: { r: HEADER_ROWS, c: 0 } });
+    const name = driver.substring(0, 31);
     XLSX.utils.book_append_sheet(wb, sheet, name);
   });
 
