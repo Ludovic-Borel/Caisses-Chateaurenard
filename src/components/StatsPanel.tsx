@@ -217,7 +217,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
             </>
           ) : (
             <p className="text-muted-foreground text-sm italic">
-              Archivez plusieurs mois pour voir l'évolution mensuelle.
+              Enregistrez des données sur plusieurs mois pour voir l'évolution mensuelle.
             </p>
           )}
         </div>
