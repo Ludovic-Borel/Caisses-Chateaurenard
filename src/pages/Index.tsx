@@ -71,6 +71,7 @@ export default function Index() {
   }, [data, drivers]);
 
   const daysInMonth = getDaysInMonth(data.year, data.month);
+  const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
   return (
     <div className="min-h-screen bg-background">
