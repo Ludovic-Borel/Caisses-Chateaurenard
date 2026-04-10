@@ -118,7 +118,7 @@ export default function Index() {
           <div className="flex-1 min-w-0">
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
               {selectedDriver === "__stats__" ? (
-                <StatsPanel currentData={data} archives={[]} drivers={drivers} />
+                <StatsPanel currentData={data} drivers={drivers} />
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
