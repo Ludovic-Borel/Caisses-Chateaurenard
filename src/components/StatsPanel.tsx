@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
-import { MonthData, SavedMonth, CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, MONTH_NAMES } from "@/lib/types";
+import { MonthData, CATEGORIES, getCellKey, getDaysInMonth, MONTH_NAMES } from "@/lib/types";
+import { loadAllMonths } from "@/lib/storage";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface Props {
   currentData: MonthData;
-  archives: SavedMonth[];
   drivers: string[];
 }
 
 const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#8b5cf6", "#dc2626", "#0891b2", "#d97706", "#4f46e5"];
 
-export default function StatsPanel({ currentData, archives, drivers }: Props) {
+export default function StatsPanel({ currentData, drivers }: Props) {
   const [tab, setTab] = useState<"ligne" | "conducteur" | "jour" | "mois" | "paiement">("ligne");
 
   const daysInMonth = getDaysInMonth(currentData.year, currentData.month);
@@ -66,15 +66,15 @@ export default function StatsPanel({ currentData, archives, drivers }: Props) {
 
   // Stats par mois (archives)
   const statsByMonth = useMemo(() => {
-    const allMonths = [...archives.map((a) => a.data), currentData];
+    const allMonths = loadAllMonths();
     return allMonths.map((md) => {
       const dim = getDaysInMonth(md.year, md.month);
       let especes = 0, cb = 0;
-      Object.values(md.drivers).forEach((dd) => {
+      Object.values(md.drivers).forEach((dd: any) => {
         for (let d = 1; d <= dim; d++) {
           CATEGORIES.forEach((cat) => {
-            especes += dd.days[d]?.[getCellKey(cat, "especes")] || 0;
-            cb += dd.days[d]?.[getCellKey(cat, "cb")] || 0;
+            especes += dd.days?.[d]?.[getCellKey(cat, "especes")] || 0;
+            cb += dd.days?.[d]?.[getCellKey(cat, "cb")] || 0;
           });
         }
       });
@@ -86,7 +86,7 @@ export default function StatsPanel({ currentData, archives, drivers }: Props) {
         sort: md.year * 100 + md.month,
       };
     }).sort((a, b) => a.sort - b.sort);
-  }, [currentData, archives]);
+  }, [currentData]);
 
   // Stats Espèces vs CB
   const statsByPayment = useMemo(() => {
@@ -217,7 +217,7 @@ export default function StatsPanel({ currentData, archives, drivers }: Props) {
             </>
           ) : (
             <p className="text-muted-foreground text-sm italic">
-              Archivez plusieurs mois pour voir l'évolution mensuelle.
+              Enregistrez des données sur plusieurs mois pour voir l'évolution mensuelle.
             </p>
           )}
         </div>
