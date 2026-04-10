@@ -10,6 +10,7 @@ import StatsPanel from "@/components/StatsPanel";
 import { Button } from "@/components/ui/button";
 import { Save, BarChart3, TableProperties } from "lucide-react";
 import { toast } from "sonner";
+import logo from "@/assets/logo.png";
 
 function createEmptyMonth(year: number, month: number): MonthData {
   return { year, month, drivers: {}, days: {} };
@@ -75,11 +76,14 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-primary text-primary-foreground px-6 py-4 shadow-md">
+      <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">📊 Recettes Lignes</h1>
-            <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne</p>
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="Pastouret Rubans-Bleus" className="h-12 object-contain" />
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Recettes Lignes</h1>
+              <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne</p>
+            </div>
           </div>
         </div>
       </header>
