@@ -71,6 +71,7 @@ export default function Index() {
   }, [data, drivers]);
 
   const daysInMonth = getDaysInMonth(data.year, data.month);
+  const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,9 +98,11 @@ export default function Index() {
         >
           <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
         </Button>
-        <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-          <Save className="h-4 w-4 mr-2" /> Exporter Excel
-        </Button>
+        {!isCurrentMonth && (
+          <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Save className="h-4 w-4 mr-2" /> Exporter Excel
+          </Button>
+        )}
       </div>
 
       <main className="max-w-[1600px] mx-auto px-6 pb-8">
