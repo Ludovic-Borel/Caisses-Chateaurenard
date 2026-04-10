@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { MonthData, SavedMonth, CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, MONTH_NAMES } from "@/lib/types";
+import { MonthData, CATEGORIES, getCellKey, getDaysInMonth, MONTH_NAMES } from "@/lib/types";
+import { loadAllMonths } from "@/lib/storage";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface Props {
   currentData: MonthData;
-  archives: SavedMonth[];
   drivers: string[];
 }
 

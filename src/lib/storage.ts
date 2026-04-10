@@ -24,3 +24,16 @@ export function loadMonth(year: number, month: number): MonthData | null {
 export function saveMonth(data: MonthData): void {
   localStorage.setItem(monthKey(data.year, data.month), JSON.stringify(data));
 }
+
+export function loadAllMonths(): MonthData[] {
+  const results: MonthData[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(MONTH_KEY_PREFIX)) {
+      try {
+        results.push(JSON.parse(localStorage.getItem(key)!));
+      } catch {}
+    }
+  }
+  return results;
+}
