@@ -92,16 +92,16 @@ export default function Index() {
       <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center flex-wrap gap-3">
         <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
         <Button
-          variant={selectedDriver === null ? "default" : "outline"}
-          onClick={() => setSelectedDriver(null)}
-        >
-          <TableProperties className="h-4 w-4 mr-2" /> Récap global
-        </Button>
-        <Button
           variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
           onClick={() => setSelectedDriver("__dashboard__")}
         >
           <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
+        </Button>
+        <Button
+          variant={selectedDriver === null ? "default" : "outline"}
+          onClick={() => setSelectedDriver(null)}
+        >
+          <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
         <Button
           variant={selectedDriver === "__stats__" ? "default" : "outline"}
@@ -138,12 +138,15 @@ export default function Index() {
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
-                <RevenueGrid
-                  title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
-                  data={data.drivers[selectedDriver] || { days: {} }}
-                  daysInMonth={daysInMonth}
-                  onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
-                />
+                <div className="space-y-6">
+                  <RevenueGrid
+                    title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
+                    data={data.drivers[selectedDriver] || { days: {} }}
+                    daysInMonth={daysInMonth}
+                    onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
+                  />
+                  <RecapGrid data={data} drivers={drivers} />
+                </div>
               )}
             </div>
           </div>
