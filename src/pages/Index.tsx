@@ -138,12 +138,15 @@ export default function Index() {
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
-                <RevenueGrid
-                  title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
-                  data={data.drivers[selectedDriver] || { days: {} }}
-                  daysInMonth={daysInMonth}
-                  onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
-                />
+                <div className="space-y-6">
+                  <RevenueGrid
+                    title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
+                    data={data.drivers[selectedDriver] || { days: {} }}
+                    daysInMonth={daysInMonth}
+                    onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
+                  />
+                  <RecapGrid data={data} drivers={drivers} />
+                </div>
               )}
             </div>
           </div>
