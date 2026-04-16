@@ -133,6 +133,8 @@ export default function Index() {
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
               {selectedDriver === "__stats__" ? (
                 <StatsPanel currentData={data} drivers={drivers} />
+              ) : selectedDriver === "__dashboard__" ? (
+                <Dashboard currentData={data} drivers={drivers} />
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
