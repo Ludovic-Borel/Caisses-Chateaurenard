@@ -103,12 +103,6 @@ export default function Index() {
         >
           <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
-        <Button
-          variant={selectedDriver === "__stats__" ? "default" : "outline"}
-          onClick={() => setSelectedDriver("__stats__")}
-        >
-          <BarChart3 className="h-4 w-4 mr-2" /> Statistiques
-        </Button>
         {!isCurrentMonth && (
           <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
             <Save className="h-4 w-4 mr-2" /> Exporter Excel
