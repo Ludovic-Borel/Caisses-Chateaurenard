@@ -7,8 +7,9 @@ import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
+import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, BarChart3, TableProperties } from "lucide-react";
+import { Save, BarChart3, TableProperties, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
