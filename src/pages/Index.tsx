@@ -98,6 +98,12 @@ export default function Index() {
           <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
         <Button
+          variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
+          onClick={() => setSelectedDriver("__dashboard__")}
+        >
+          <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
+        </Button>
+        <Button
           variant={selectedDriver === "__stats__" ? "default" : "outline"}
           onClick={() => setSelectedDriver("__stats__")}
         >
