@@ -7,8 +7,9 @@ import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
+import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, BarChart3, TableProperties } from "lucide-react";
+import { Save, BarChart3, TableProperties, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -97,6 +98,12 @@ export default function Index() {
           <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
         <Button
+          variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
+          onClick={() => setSelectedDriver("__dashboard__")}
+        >
+          <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
+        </Button>
+        <Button
           variant={selectedDriver === "__stats__" ? "default" : "outline"}
           onClick={() => setSelectedDriver("__stats__")}
         >
@@ -126,6 +133,8 @@ export default function Index() {
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
               {selectedDriver === "__stats__" ? (
                 <StatsPanel currentData={data} drivers={drivers} />
+              ) : selectedDriver === "__dashboard__" ? (
+                <Dashboard currentData={data} drivers={drivers} />
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
