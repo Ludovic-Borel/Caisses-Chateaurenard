@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
+import { importWorkbookFile } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
@@ -10,7 +11,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, TableProperties, LayoutDashboard, Loader2 } from "lucide-react";
+import { Save, TableProperties, LayoutDashboard, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -137,6 +138,56 @@ export default function Index() {
     }
   }, [data, drivers]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setLoading(true);
+    let successCount = 0;
+    let lastImported: { year: number; month: number } | null = null;
+    const allNewDrivers = new Set<string>();
+
+    for (const file of Array.from(files)) {
+      try {
+        const result = await importWorkbookFile(file);
+        const existing = await loadMonth(result.data.year, result.data.month);
+        const merged: MonthData = existing
+          ? { ...existing, drivers: { ...existing.drivers, ...result.data.drivers } }
+          : result.data;
+        await saveMonth(merged);
+        result.driversFound.forEach((d) => allNewDrivers.add(d));
+        lastImported = { year: result.data.year, month: result.data.month };
+        successCount++;
+        toast.success(`${file.name} : ${result.driversFound.length} chauffeur(s)`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        toast.error(`${file.name} : ${msg}`);
+      }
+    }
+
+    if (allNewDrivers.size > 0) {
+      const currentSet = new Set(driversRef.current);
+      const toAdd = [...allNewDrivers].filter((d) => !currentSet.has(d));
+      if (toAdd.length > 0) {
+        const updated = [...driversRef.current, ...toAdd].sort();
+        setDrivers(updated);
+        await saveDrivers(updated);
+      }
+    }
+
+    if (lastImported && lastImported.year === dataRef.current.year && lastImported.month === dataRef.current.month) {
+      const refreshed = await loadMonth(lastImported.year, lastImported.month);
+      if (refreshed) {
+        skipNextSave.current = true;
+        setData(refreshed);
+      }
+    }
+
+    setLoading(false);
+    if (successCount > 0) toast.success(`${successCount} fichier(s) importé(s)`);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
@@ -168,6 +219,20 @@ export default function Index() {
         >
           <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" /> Importer Excel
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          multiple
+          className="hidden"
+          onChange={(e) => handleImportFiles(e.target.files)}
+        />
         {!isCurrentMonth && (
           <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
             <Save className="h-4 w-4 mr-2" /> Exporter Excel
