@@ -101,7 +101,7 @@ export async function saveMonth(data: MonthData): Promise<void> {
     const { error } = await supabase
       .from("month_data")
       .upsert(
-        { year: data.year, month: data.month, data: data as unknown as Record<string, unknown> },
+        [{ year: data.year, month: data.month, data: data as never }] as never,
         { onConflict: "year,month" }
       );
     if (error) throw error;
@@ -155,7 +155,7 @@ export async function migrateLocalToRemote(): Promise<void> {
         try {
           const md: MonthData = JSON.parse(localStorage.getItem(key)!);
           await supabase.from("month_data").upsert(
-            { year: md.year, month: md.month, data: md as unknown as Record<string, unknown> },
+            [{ year: md.year, month: md.month, data: md as never }] as never,
             { onConflict: "year,month" }
           );
         } catch {}
