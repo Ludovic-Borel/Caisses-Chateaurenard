@@ -9,8 +9,8 @@ export interface ImportResult {
 
 // Parse "Recettes Lignes 04 - 2026" or similar in filename
 function parseMonthYearFromName(fileName: string): { year: number; month: number } | null {
-  const base = fileName.replace(/\.xlsx?$/i, "");
-  // Try MM - YYYY or MM-YYYY
+  const base = fileName.replace(/\.xlsx?m?$/i, "");
+  // Try MM - YYYY or MM-YYYY or MM_YYYY
   const numMatch = base.match(/(\d{1,2})\s*[-_/]\s*(\d{4})/);
   if (numMatch) {
     const m = parseInt(numMatch[1], 10) - 1;
@@ -21,67 +21,111 @@ function parseMonthYearFromName(fileName: string): { year: number; month: number
   const lower = base.toLowerCase();
   for (let i = 0; i < MONTH_NAMES.length; i++) {
     const mn = MONTH_NAMES[i].toLowerCase();
-    const idx = lower.indexOf(mn);
-    if (idx >= 0) {
-      const yMatch = base.slice(idx).match(/(\d{4})/);
+    if (lower.includes(mn)) {
+      const yMatch = base.match(/(\d{4})/);
       if (yMatch) return { year: parseInt(yMatch[1], 10), month: i };
     }
   }
   return null;
 }
 
-const RESERVED_SHEETS = new Set(["Tableau de bord", "Récapitulatif", "Recapitulatif"]);
+function toNumber(v: unknown): number {
+  if (v == null || v === "") return 0;
+  if (typeof v === "number") return v;
+  const n = parseFloat(String(v).replace(",", ".").replace(/[^\d.\-]/g, ""));
+  return isNaN(n) ? 0 : n;
+}
 
-// Match an export per-driver sheet: header row "Jour | 704 Esp. | 704 CB | ... | Total"
-function parseDriverSheet(sheet: XLSX.WorkSheet, daysInMonth: number): DriverMonthData | null {
-  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
-  // Find header row containing "Jour"
-  let headerRow = -1;
-  for (let i = 0; i < Math.min(aoa.length, 10); i++) {
-    const row = aoa[i] || [];
-    if (row.some((c) => typeof c === "string" && c.trim().toLowerCase() === "jour")) {
-      headerRow = i;
-      break;
-    }
+function findSheet(wb: XLSX.WorkBook, candidates: string[]): string | null {
+  const lower = wb.SheetNames.map((s) => s.toLowerCase());
+  for (const c of candidates) {
+    const idx = lower.indexOf(c.toLowerCase());
+    if (idx >= 0) return wb.SheetNames[idx];
   }
-  if (headerRow < 0) return null;
+  return null;
+}
 
-  const header = (aoa[headerRow] as unknown[]).map((c) => String(c ?? "").trim());
-  // Map column index -> {category, paymentType}
-  const colMap: Record<number, { cat: Category; pay: "especes" | "cb" }> = {};
-  header.forEach((h, idx) => {
-    const m = h.match(/^(\S+)\s+(Esp\.?|Espèces|CB)$/i);
-    if (m) {
-      const catRaw = m[1];
-      const cat = CATEGORIES.find((c) => c.toLowerCase() === catRaw.toLowerCase()) as Category | undefined;
-      if (!cat) return;
-      const pay: "especes" | "cb" = /cb/i.test(m[2]) ? "cb" : "especes";
-      colMap[idx] = { cat, pay };
+// Parse the "Recap" sheet: row 1 = driver names (every N cols), row 2 = headers, col A = day
+function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<string, DriverMonthData> {
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
+  if (aoa.length < 3) return {};
+
+  const driverRow = aoa[0] as unknown[];
+  const headerRow = aoa[1] as unknown[];
+
+  // Find driver blocks: column index -> driver name
+  const driverBlocks: { col: number; name: string }[] = [];
+  driverRow.forEach((v, idx) => {
+    if (v != null && String(v).trim() !== "") {
+      driverBlocks.push({ col: idx, name: String(v).trim().toUpperCase() });
     }
   });
-  if (Object.keys(colMap).length === 0) return null;
+  if (driverBlocks.length === 0) return {};
 
-  const dayColIdx = header.findIndex((h) => h.toLowerCase() === "jour");
-  const result: DriverMonthData = { days: {} };
-  for (let r = headerRow + 1; r < aoa.length; r++) {
-    const row = aoa[r] as unknown[];
-    if (!row) continue;
-    const dayVal = row[dayColIdx];
-    const day = typeof dayVal === "number" ? dayVal : parseInt(String(dayVal), 10);
-    if (!day || day < 1 || day > daysInMonth) continue;
-    const dayEntry: Record<string, number> = {};
-    let hasValue = false;
-    Object.entries(colMap).forEach(([idxStr, { cat, pay }]) => {
-      const v = row[parseInt(idxStr, 10)];
-      const num = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
-      if (!isNaN(num) && num !== 0) {
-        dayEntry[getCellKey(cat, pay)] = num;
-        hasValue = true;
+  // For each block, map relative column -> {category, payment}
+  // Pattern within a block: cat1, CB, cat2, CB, ..., cat6, CB
+  // We read header row at the block's start to discover categories
+  const result: Record<string, DriverMonthData> = {};
+
+  driverBlocks.forEach((block, bIdx) => {
+    const nextCol = bIdx + 1 < driverBlocks.length ? driverBlocks[bIdx + 1].col : headerRow.length;
+    const blockMap: { col: number; cat: Category; pay: "especes" | "cb" }[] = [];
+    let currentCat: Category | null = null;
+    for (let c = block.col; c < nextCol; c++) {
+      const h = headerRow[c];
+      if (h == null) continue;
+      const hStr = String(h).trim();
+      // Match a category (number or "Scolaires")
+      const cat = CATEGORIES.find((cat) => cat.toLowerCase() === hStr.toLowerCase());
+      if (cat) {
+        currentCat = cat;
+        blockMap.push({ col: c, cat, pay: "especes" });
+      } else if (/^cb$/i.test(hStr) && currentCat) {
+        blockMap.push({ col: c, cat: currentCat, pay: "cb" });
       }
-    });
-    if (hasValue) result.days[day] = dayEntry;
+    }
+    if (blockMap.length === 0) return;
+
+    const dd: DriverMonthData = { days: {} };
+    // Day rows start at aoa index 2 (row 3)
+    for (let r = 2; r < aoa.length; r++) {
+      const row = aoa[r] as unknown[];
+      if (!row) continue;
+      const dayVal = row[0];
+      const day = typeof dayVal === "number" ? dayVal : parseInt(String(dayVal ?? ""), 10);
+      if (!day || day < 1 || day > daysInMonth) continue;
+      const dayEntry: Record<string, number> = {};
+      let hasValue = false;
+      blockMap.forEach(({ col, cat, pay }) => {
+        const num = toNumber(row[col]);
+        if (num !== 0) {
+          dayEntry[getCellKey(cat, pay)] = num;
+          hasValue = true;
+        }
+      });
+      if (hasValue) dd.days[day] = dayEntry;
+    }
+    if (Object.keys(dd.days).length > 0) {
+      result[block.name] = dd;
+    }
+  });
+
+  return result;
+}
+
+function parseDriverList(sheet: XLSX.WorkSheet): string[] {
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
+  const names: string[] = [];
+  for (const row of aoa) {
+    if (!row) continue;
+    for (const v of row) {
+      if (v != null && String(v).trim() !== "") {
+        names.push(String(v).trim().toUpperCase());
+        break;
+      }
+    }
   }
-  return Object.keys(result.days).length > 0 ? result : null;
+  return names;
 }
 
 export async function importWorkbookFile(file: File): Promise<ImportResult> {
@@ -97,24 +141,24 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
   const { year, month } = my;
   const daysInMonth = getDaysInMonth(year, month);
 
-  const monthData: MonthData = { year, month, drivers: {}, days: {} };
-  const driversFound: string[] = [];
-
-  for (const sheetName of wb.SheetNames) {
-    if (RESERVED_SHEETS.has(sheetName)) continue;
-    const sheet = wb.Sheets[sheetName];
-    const dd = parseDriverSheet(sheet, daysInMonth);
-    if (dd) {
-      // Use sheet name as driver name (export truncates to 31 chars)
-      const driverName = sheetName.trim().toUpperCase();
-      monthData.drivers[driverName] = dd;
-      driversFound.push(driverName);
-    }
+  const recapName = findSheet(wb, ["Recap", "Récap", "Recapitulatif", "Récapitulatif"]);
+  if (!recapName) {
+    throw new Error(`Feuille "Recap" introuvable dans "${file.name}".`);
   }
+
+  const driversData = parseRecapSheet(wb.Sheets[recapName], daysInMonth);
+  const driversFound = Object.keys(driversData);
+
+  // Also gather full driver list from "Liste Chauffeurs" if present
+  const listName = findSheet(wb, ["Liste Chauffeurs", "Liste", "Chauffeurs"]);
+  const fullList = listName ? parseDriverList(wb.Sheets[listName]) : [];
+  const allDrivers = Array.from(new Set([...fullList, ...driversFound])).sort();
 
   if (driversFound.length === 0) {
-    throw new Error(`Aucun chauffeur détecté dans "${file.name}". Vérifiez que les feuilles contiennent bien les colonnes "Jour", "704 Esp.", "704 CB", etc.`);
+    throw new Error(`Aucune donnée chauffeur trouvée dans la feuille "${recapName}".`);
   }
 
-  return { data: monthData, driversFound, fileName: file.name };
+  const monthData: MonthData = { year, month, drivers: driversData, days: {} };
+
+  return { data: monthData, driversFound: allDrivers, fileName: file.name };
 }

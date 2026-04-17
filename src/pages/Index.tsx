@@ -228,7 +228,7 @@ export default function Index() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.xlsm"
           multiple
           className="hidden"
           onChange={(e) => handleImportFiles(e.target.files)}
