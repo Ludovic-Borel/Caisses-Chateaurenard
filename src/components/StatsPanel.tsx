@@ -12,6 +12,9 @@ const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#8b5cf6", "#dc2626", "#0891b2"
 
 export default function StatsPanel({ currentData, drivers }: Props) {
   const [tab, setTab] = useState<"ligne" | "conducteur" | "jour" | "mois" | "paiement">("ligne");
+  const [allMonths, setAllMonths] = useState<MonthData[]>([]);
+  useEffect(() => { loadAllMonths().then(setAllMonths); }, []);
+
 
   const daysInMonth = getDaysInMonth(currentData.year, currentData.month);
 
@@ -66,7 +69,6 @@ export default function StatsPanel({ currentData, drivers }: Props) {
 
   // Stats par mois (archives)
   const statsByMonth = useMemo(() => {
-    const allMonths = loadAllMonths();
     return allMonths.map((md) => {
       const dim = getDaysInMonth(md.year, md.month);
       let especes = 0, cb = 0;
