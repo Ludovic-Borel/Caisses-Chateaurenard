@@ -219,6 +219,20 @@ export default function Index() {
         >
           <TableProperties className="h-4 w-4 mr-2" /> Récap global
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" /> Importer Excel
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          multiple
+          className="hidden"
+          onChange={(e) => handleImportFiles(e.target.files)}
+        />
         {!isCurrentMonth && (
           <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
             <Save className="h-4 w-4 mr-2" /> Exporter Excel
