@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      drivers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      month_data: {
+        Row: {
+          data: Json
+          id: string
+          month: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          data?: Json
+          id?: string
+          month: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          data?: Json
+          id?: string
+          month?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
