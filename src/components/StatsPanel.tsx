@@ -88,7 +88,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
         sort: md.year * 100 + md.month,
       };
     }).sort((a, b) => a.sort - b.sort);
-  }, [currentData]);
+  }, [allMonths]);
 
   // Stats Espèces vs CB
   const statsByPayment = useMemo(() => {

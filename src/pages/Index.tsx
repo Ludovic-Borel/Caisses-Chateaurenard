@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadDrivers, saveDrivers } from "@/lib/storage";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
+import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
@@ -9,7 +10,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, BarChart3, TableProperties, LayoutDashboard } from "lucide-react";
+import { Save, TableProperties, LayoutDashboard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -19,18 +20,81 @@ function createEmptyMonth(year: number, month: number): MonthData {
 
 export default function Index() {
   const now = new Date();
-  const [data, setData] = useState<MonthData>(() => {
-    return loadMonth(now.getFullYear(), now.getMonth()) || createEmptyMonth(now.getFullYear(), now.getMonth());
-  });
-  const [drivers, setDrivers] = useState<string[]>(() => loadDrivers());
+  const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
+  const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const skipNextSave = useRef(true);
+  const skipNextDriversSave = useRef(true);
+  const dataRef = useRef(data);
+  const driversRef = useRef(drivers);
 
-  useEffect(() => { saveMonth(data); }, [data]);
-  useEffect(() => { saveDrivers(drivers); }, [drivers]);
+  // Initial load + migration
+  useEffect(() => {
+    (async () => {
+      await migrateLocalToRemote();
+      const [m, d] = await Promise.all([
+        loadMonth(now.getFullYear(), now.getMonth()),
+        loadDrivers(),
+      ]);
+      skipNextSave.current = true;
+      skipNextDriversSave.current = true;
+      setData(m || createEmptyMonth(now.getFullYear(), now.getMonth()));
+      setDrivers(d);
+      setLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleMonthChange = useCallback((year: number, month: number) => {
-    setData(loadMonth(year, month) || createEmptyMonth(year, month));
+  // Debounced save of month data
+  useEffect(() => {
+    dataRef.current = data;
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
+    const t = setTimeout(() => { saveMonth(data); }, 500);
+    return () => clearTimeout(t);
+  }, [data]);
+
+  // Debounced save of drivers
+  useEffect(() => {
+    driversRef.current = drivers;
+    if (skipNextDriversSave.current) { skipNextDriversSave.current = false; return; }
+    const t = setTimeout(() => { saveDrivers(drivers); }, 500);
+    return () => clearTimeout(t);
+  }, [drivers]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("recettes-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "month_data" }, (payload) => {
+        const row = (payload.new || payload.old) as { year: number; month: number; data: MonthData } | null;
+        if (!row) return;
+        if (row.year === dataRef.current.year && row.month === dataRef.current.month && payload.new) {
+          const incoming = (payload.new as { data: MonthData }).data;
+          if (JSON.stringify(incoming) !== JSON.stringify(dataRef.current)) {
+            skipNextSave.current = true;
+            setData({ ...incoming, year: row.year, month: row.month });
+          }
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, async () => {
+        const list = await loadDrivers();
+        if (JSON.stringify(list) !== JSON.stringify(driversRef.current)) {
+          skipNextDriversSave.current = true;
+          setDrivers(list);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const handleMonthChange = useCallback(async (year: number, month: number) => {
+    setLoading(true);
+    const m = await loadMonth(year, month);
+    skipNextSave.current = true;
+    setData(m || createEmptyMonth(year, month));
     setSelectedDriver(null);
+    setLoading(false);
   }, []);
 
   const handleDriverDataChange = useCallback((driver: string, driverData: DriverMonthData) => {
@@ -62,6 +126,7 @@ export default function Index() {
       return { ...prev, drivers: driverData ? { ...rest, [newName]: driverData } : rest };
     });
     if (selectedDriver === oldName) setSelectedDriver(newName);
+    renameDriverRemote(oldName, newName);
     toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
   }, [selectedDriver]);
 
@@ -83,7 +148,7 @@ export default function Index() {
             <img src={logo} alt="Pastouret Rubans-Bleus" className="h-12 object-contain" />
             <div>
               <h1 className="text-xl font-bold tracking-tight">Recettes Lignes</h1>
-              <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne</p>
+              <p className="text-primary-foreground/70 text-sm">Suivi mensuel des recettes par chauffeur et par ligne — synchronisé en temps réel</p>
             </div>
           </div>
         </div>
@@ -107,6 +172,11 @@ export default function Index() {
           <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
             <Save className="h-4 w-4 mr-2" /> Exporter Excel
           </Button>
+        )}
+        {loading && (
+          <span className="text-sm text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
+          </span>
         )}
       </div>
 
