@@ -138,6 +138,56 @@ export default function Index() {
     }
   }, [data, drivers]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setLoading(true);
+    let successCount = 0;
+    let lastImported: { year: number; month: number } | null = null;
+    const allNewDrivers = new Set<string>();
+
+    for (const file of Array.from(files)) {
+      try {
+        const result = await importWorkbookFile(file);
+        const existing = await loadMonth(result.data.year, result.data.month);
+        const merged: MonthData = existing
+          ? { ...existing, drivers: { ...existing.drivers, ...result.data.drivers } }
+          : result.data;
+        await saveMonth(merged);
+        result.driversFound.forEach((d) => allNewDrivers.add(d));
+        lastImported = { year: result.data.year, month: result.data.month };
+        successCount++;
+        toast.success(`${file.name} : ${result.driversFound.length} chauffeur(s)`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        toast.error(`${file.name} : ${msg}`);
+      }
+    }
+
+    if (allNewDrivers.size > 0) {
+      const currentSet = new Set(driversRef.current);
+      const toAdd = [...allNewDrivers].filter((d) => !currentSet.has(d));
+      if (toAdd.length > 0) {
+        const updated = [...driversRef.current, ...toAdd].sort();
+        setDrivers(updated);
+        await saveDrivers(updated);
+      }
+    }
+
+    if (lastImported && lastImported.year === dataRef.current.year && lastImported.month === dataRef.current.month) {
+      const refreshed = await loadMonth(lastImported.year, lastImported.month);
+      if (refreshed) {
+        skipNextSave.current = true;
+        setData(refreshed);
+      }
+    }
+
+    setLoading(false);
+    if (successCount > 0) toast.success(`${successCount} fichier(s) importé(s)`);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
