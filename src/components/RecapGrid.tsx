@@ -225,7 +225,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                     <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
                       {dailyByCategory[d][cat].especes > 0 ? fmt(dailyByCategory[d][cat].especes) : "—"}
                     </td>
-                    <td key={`day-${d}-${cat}-c`} className="border border-border px-1 py-1 text-right bg-grid-cb/50">
+                    <td key={`day-${d}-${cat}-c`} className="border border-border px-1 py-1 bg-grid-cb/50 text-center">
                       {dailyByCategory[d][cat].cb > 0 ? fmt(dailyByCategory[d][cat].cb) : "—"}
                     </td>
                   </>
