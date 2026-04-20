@@ -47,32 +47,42 @@ export default function RecapGrid({ data, drivers }: Props) {
     notReturned: driverTotals.reduce((s, d) => s + d.totalNotReturned, 0),
   };
 
-  // Compute per-day per-category totals (sum across all drivers, espèces + cb)
-  const dailyByCategory: Record<number, Record<string, number>> = {};
+  // Compute per-day per-category totals split by payment type (sum across all drivers)
+  const dailyByCategory: Record<number, Record<string, { especes: number; cb: number }>> = {};
   for (let d = 1; d <= daysInMonth; d++) {
     dailyByCategory[d] = {};
     CATEGORIES.forEach((cat) => {
-      let sum = 0;
+      let e = 0, c = 0;
       drivers.forEach((driver) => {
         const dd = data.drivers[driver];
         if (!dd) return;
-        sum += (dd.days[d]?.[getCellKey(cat, "especes")] || 0)
-             + (dd.days[d]?.[getCellKey(cat, "cb")] || 0);
+        e += dd.days[d]?.[getCellKey(cat, "especes")] || 0;
+        c += dd.days[d]?.[getCellKey(cat, "cb")] || 0;
       });
-      dailyByCategory[d][cat] = sum;
+      dailyByCategory[d][cat] = { especes: e, cb: c };
     });
   }
 
-  const categoryDayTotals: Record<string, number> = {};
+  const categoryDayTotals: Record<string, { especes: number; cb: number }> = {};
   CATEGORIES.forEach((cat) => {
-    categoryDayTotals[cat] = 0;
-    for (let d = 1; d <= daysInMonth; d++) categoryDayTotals[cat] += dailyByCategory[d][cat];
+    let e = 0, c = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      e += dailyByCategory[d][cat].especes;
+      c += dailyByCategory[d][cat].cb;
+    }
+    categoryDayTotals[cat] = { especes: e, cb: c };
   });
-  const dayGrandTotals: Record<number, number> = {};
+  const dayGrandTotals: Record<number, { especes: number; cb: number; total: number }> = {};
   for (let d = 1; d <= daysInMonth; d++) {
-    dayGrandTotals[d] = CATEGORIES.reduce((s, c) => s + dailyByCategory[d][c], 0);
+    const e = CATEGORIES.reduce((s, c) => s + dailyByCategory[d][c].especes, 0);
+    const c = CATEGORIES.reduce((s, cat) => s + dailyByCategory[d][cat].cb, 0);
+    dayGrandTotals[d] = { especes: e, cb: c, total: e + c };
   }
-  const overallDailyTotal = Object.values(dayGrandTotals).reduce((s, v) => s + v, 0);
+  const overallDaily = {
+    especes: Object.values(dayGrandTotals).reduce((s, v) => s + v.especes, 0),
+    cb: Object.values(dayGrandTotals).reduce((s, v) => s + v.cb, 0),
+    total: Object.values(dayGrandTotals).reduce((s, v) => s + v.total, 0),
+  };
 
   return (
     <div className="overflow-x-auto space-y-8">
