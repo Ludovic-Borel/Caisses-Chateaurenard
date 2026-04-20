@@ -23,7 +23,7 @@ export default function Index() {
   const now = new Date();
   const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
   const [drivers, setDrivers] = useState<string[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
   const [loading, setLoading] = useState(true);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
@@ -94,7 +94,6 @@ export default function Index() {
     const m = await loadMonth(year, month);
     skipNextSave.current = true;
     setData(m || createEmptyMonth(year, month));
-    setSelectedDriver(null);
     setLoading(false);
   }, []);
 
@@ -110,14 +109,33 @@ export default function Index() {
     toast.success(`Chauffeur ${name} ajouté`);
   }, []);
 
-  const handleRemoveDriver = useCallback((name: string) => {
+  const handleRemoveDriver = useCallback(async (name: string) => {
     setDrivers((prev) => prev.filter((d) => d !== name));
     setData((prev) => {
       const { [name]: _, ...rest } = prev.drivers;
       return { ...prev, drivers: rest };
     });
-    if (selectedDriver === name) setSelectedDriver(null);
-    toast.success(`Chauffeur ${name} supprimé`);
+    if (selectedDriver === name) setSelectedDriver("__dashboard__");
+
+    // Strip from future months only (past months keep historical data)
+    try {
+      const all = await loadAllMonths();
+      const cy = dataRef.current.year;
+      const cm = dataRef.current.month;
+      const future = all.filter((m) => m.year > cy || (m.year === cy && m.month > cm));
+      await Promise.all(
+        future
+          .filter((m) => m.drivers && m.drivers[name])
+          .map((m) => {
+            const { [name]: _, ...rest } = m.drivers;
+            return saveMonth({ ...m, drivers: rest });
+          })
+      );
+    } catch (e) {
+      console.warn("Failed to strip driver from future months", e);
+    }
+
+    toast.success(`Chauffeur ${name} supprimé (historique conservé)`);
   }, [selectedDriver]);
 
   const handleRenameDriver = useCallback((oldName: string, newName: string) => {
@@ -205,44 +223,48 @@ export default function Index() {
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center flex-wrap gap-3">
-        <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
-        <Button
-          variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
-          onClick={() => setSelectedDriver("__dashboard__")}
-        >
-          <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
-        </Button>
-        <Button
-          variant={selectedDriver === null ? "default" : "outline"}
-          onClick={() => setSelectedDriver(null)}
-        >
-          <TableProperties className="h-4 w-4 mr-2" /> Récap global
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="h-4 w-4 mr-2" /> Importer Excel
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.xlsm"
-          multiple
-          className="hidden"
-          onChange={(e) => handleImportFiles(e.target.files)}
-        />
-        {!isCurrentMonth && (
-          <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Save className="h-4 w-4 mr-2" /> Exporter Excel
+      <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center flex-wrap gap-3">
+          <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
+          <Button
+            variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
+            onClick={() => setSelectedDriver("__dashboard__")}
+          >
+            <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
           </Button>
-        )}
-        {loading && (
-          <span className="text-sm text-muted-foreground flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
-          </span>
-        )}
+          <Button
+            variant={selectedDriver === null ? "default" : "outline"}
+            onClick={() => setSelectedDriver(null)}
+          >
+            <TableProperties className="h-4 w-4 mr-2" /> Récap global
+          </Button>
+          {loading && (
+            <span className="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
+            </span>
+          )}
+        </div>
+        <div className="flex items-center flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" /> Importer Excel
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.xlsm"
+            multiple
+            className="hidden"
+            onChange={(e) => handleImportFiles(e.target.files)}
+          />
+          {!isCurrentMonth && (
+            <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Save className="h-4 w-4 mr-2" /> Exporter Excel
+            </Button>
+          )}
+        </div>
       </div>
 
       <main className="max-w-[1600px] mx-auto px-6 pb-8">
