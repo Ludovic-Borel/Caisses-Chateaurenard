@@ -47,8 +47,35 @@ export default function RecapGrid({ data, drivers }: Props) {
     notReturned: driverTotals.reduce((s, d) => s + d.totalNotReturned, 0),
   };
 
+  // Compute per-day per-category totals (sum across all drivers, espèces + cb)
+  const dailyByCategory: Record<number, Record<string, number>> = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    dailyByCategory[d] = {};
+    CATEGORIES.forEach((cat) => {
+      let sum = 0;
+      drivers.forEach((driver) => {
+        const dd = data.drivers[driver];
+        if (!dd) return;
+        sum += (dd.days[d]?.[getCellKey(cat, "especes")] || 0)
+             + (dd.days[d]?.[getCellKey(cat, "cb")] || 0);
+      });
+      dailyByCategory[d][cat] = sum;
+    });
+  }
+
+  const categoryDayTotals: Record<string, number> = {};
+  CATEGORIES.forEach((cat) => {
+    categoryDayTotals[cat] = 0;
+    for (let d = 1; d <= daysInMonth; d++) categoryDayTotals[cat] += dailyByCategory[d][cat];
+  });
+  const dayGrandTotals: Record<number, number> = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    dayGrandTotals[d] = CATEGORIES.reduce((s, c) => s + dailyByCategory[d][c], 0);
+  }
+  const overallDailyTotal = Object.values(dayGrandTotals).reduce((s, v) => s + v, 0);
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto space-y-8">
       <h2 className="text-lg font-bold text-primary mb-3">
         Récapitulatif — {MONTH_NAMES[data.month]} {data.year}
       </h2>
@@ -137,6 +164,51 @@ export default function RecapGrid({ data, drivers }: Props) {
           </tr>
         </tfoot>
       </table>
+
+      <div>
+        <h3 className="text-base font-bold text-primary mb-3">
+          Recettes par ligne et par jour
+        </h3>
+        <table className="w-full text-xs border-collapse min-w-[800px]">
+          <thead>
+            <tr className="bg-grid-header text-grid-header-foreground">
+              <th className="border border-border px-3 py-1.5 text-left">Jour</th>
+              {CATEGORIES.map((cat) => (
+                <th key={`d-h-${cat}`} className="border border-border px-2 py-1.5 text-center">
+                  {cat}
+                </th>
+              ))}
+              <th className="border border-border px-2 py-1.5 text-center">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+              <tr key={`day-${d}`} className="hover:bg-muted/50 transition-colors">
+                <td className="border border-border px-3 py-1 font-medium text-foreground">{d}</td>
+                {CATEGORIES.map((cat) => (
+                  <td key={`day-${d}-${cat}`} className="border border-border px-2 py-1 text-right">
+                    {dailyByCategory[d][cat] > 0 ? fmt(dailyByCategory[d][cat]) : "—"}
+                  </td>
+                ))}
+                <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
+                  {dayGrandTotals[d] > 0 ? fmt(dayGrandTotals[d]) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-grid-header text-grid-header-foreground font-bold">
+              <td className="border border-border px-3 py-1.5">TOTAL</td>
+              {CATEGORIES.map((cat) => (
+                <td key={`day-t-${cat}`} className="border border-border px-2 py-1.5 text-right">
+                  {fmt(categoryDayTotals[cat])}
+                </td>
+              ))}
+              <td className="border border-border px-2 py-1.5 text-right">{fmt(overallDailyTotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }
