@@ -183,7 +183,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                 </td>
               );
             })}
-            <td colSpan={4} className="border border-border px-2 py-1.5 text-right bg-grid-total">
+            <td colSpan={4} className="border border-border px-1 py-1.5 bg-grid-total text-center">
               {fmt(grandTotals.total)}
             </td>
           </tr>
@@ -262,7 +262,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                   {fmt(categoryDayTotals[cat].especes + categoryDayTotals[cat].cb)}
                 </td>
               ))}
-              <td colSpan={3} className="border border-border px-2 py-1.5 text-right bg-grid-total">
+              <td colSpan={3} className="border border-border px-1 py-1.5 bg-grid-total text-center">
                 {fmt(overallDaily.total)}
               </td>
             </tr>
