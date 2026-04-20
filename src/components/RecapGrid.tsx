@@ -219,7 +219,7 @@ export default function RecapGrid({ data, drivers }: Props) {
           <tbody>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
               <tr key={`day-${d}`} className="hover:bg-muted/50 transition-colors">
-                <td className="border border-border px-3 py-1 font-medium text-foreground">{d}</td>
+                <td className="border border-border px-3 py-1 font-medium text-foreground text-center">{d}</td>
                 {CATEGORIES.map((cat) => (
                   <>
                     <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
@@ -230,10 +230,10 @@ export default function RecapGrid({ data, drivers }: Props) {
                     </td>
                   </>
                 ))}
-                <td className="border border-border px-2 py-1 text-right font-medium">
+                <td className="border border-border px-2 py-1 font-medium text-center">
                   {dayGrandTotals[d].especes > 0 ? fmt(dayGrandTotals[d].especes) : "—"}
                 </td>
-                <td className="border border-border px-2 py-1 text-right font-medium">
+                <td className="border border-border px-2 py-1 font-medium text-center">
                   {dayGrandTotals[d].cb > 0 ? fmt(dayGrandTotals[d].cb) : "—"}
                 </td>
                 <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
