@@ -132,7 +132,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                   <td key={`${dt.driver}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
                     {fmt(dt.categoryTotals[cat].especes)}
                   </td>
-                  <td key={`${dt.driver}-${cat}-c`} className="border border-border px-1 py-1 text-right bg-grid-cb/50">
+                  <td key={`${dt.driver}-${cat}-c`} className="border border-border px-1 py-1 bg-grid-cb/50 text-center">
                     {fmt(dt.categoryTotals[cat].cb)}
                   </td>
                 </>
