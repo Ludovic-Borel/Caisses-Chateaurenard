@@ -143,7 +143,7 @@ export default function RecapGrid({ data, drivers }: Props) {
               <td className="border border-border px-2 py-1 text-right font-medium">
                 {fmt(dt.totalCB)}
               </td>
-              <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
+              <td className="border border-border px-2 py-1 font-bold bg-grid-total text-center">
                 {fmt(dt.total)}
               </td>
               <td className={`border border-border px-2 py-1 text-right font-bold ${dt.totalNotReturned > 0 ? "text-destructive" : ""}`}>
@@ -236,7 +236,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                 <td className="border border-border px-2 py-1 font-medium text-center">
                   {dayGrandTotals[d].cb > 0 ? fmt(dayGrandTotals[d].cb) : "—"}
                 </td>
-                <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
+                <td className="border border-border px-2 py-1 font-bold bg-grid-total text-center">
                   {dayGrandTotals[d].total > 0 ? fmt(dayGrandTotals[d].total) : "—"}
                 </td>
               </tr>
