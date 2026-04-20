@@ -137,10 +137,10 @@ export default function RecapGrid({ data, drivers }: Props) {
                   </td>
                 </>
               ))}
-              <td className="border border-border px-2 py-1 text-right font-medium">
+              <td className="border border-border px-2 py-1 font-medium text-center">
                 {fmt(dt.totalEspeces)}
               </td>
-              <td className="border border-border px-2 py-1 text-right font-medium">
+              <td className="border border-border px-2 py-1 font-medium text-center">
                 {fmt(dt.totalCB)}
               </td>
               <td className="border border-border px-2 py-1 font-bold bg-grid-total text-center">
