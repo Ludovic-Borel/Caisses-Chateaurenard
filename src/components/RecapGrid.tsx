@@ -247,13 +247,13 @@ export default function RecapGrid({ data, drivers }: Props) {
               <td className="border border-border px-3 py-1.5">TOTAL</td>
               {CATEGORIES.map((cat) => (
                 <>
-                  <td key={`day-t-${cat}-e`} className="border border-border px-1 py-1.5 text-right">{fmt(categoryDayTotals[cat].especes)}</td>
-                  <td key={`day-t-${cat}-c`} className="border border-border px-1 py-1.5 text-right">{fmt(categoryDayTotals[cat].cb)}</td>
+                  <td key={`day-t-${cat}-e`} className="border border-border px-1 py-1 text-center">{fmt(categoryDayTotals[cat].especes)}</td>
+                  <td key={`day-t-${cat}-c`} className="border border-border px-1 py-1 text-center">{fmt(categoryDayTotals[cat].cb)}</td>
                 </>
               ))}
-              <td className="border border-border px-2 py-1.5 text-right">{fmt(overallDaily.especes)}</td>
-              <td className="border border-border px-2 py-1.5 text-right">{fmt(overallDaily.cb)}</td>
-              <td className="border border-border px-2 py-1.5 text-right">{fmt(overallDaily.total)}</td>
+              <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.especes)}</td>
+              <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.cb)}</td>
+              <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.total)}</td>
             </tr>
             <tr className="bg-secondary text-secondary-foreground font-bold">
               <td className="border border-border px-3 py-1.5">TOTAL Esp.+CB</td>
