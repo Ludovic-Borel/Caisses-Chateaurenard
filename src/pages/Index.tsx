@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote } from "@/lib/storage";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
 import { importWorkbookFile } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
