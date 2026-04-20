@@ -217,7 +217,7 @@ export default function Index() {
             <img src={logo} alt="Pastouret Rubans-Bleus" className="h-12 object-contain" />
             <div>
               <h1 className="text-xl font-bold tracking-tight">Recettes Lignes</h1>
-              <p className="text-primary-foreground/70 text-sm">Suivi Mensuel des Recettes Mensuelle en Temps Réel</p>
+              <p className="text-primary-foreground/70 text-sm">Suivi Mensuel des Recettes Mensuelles en Temps Réel</p>
             </div>
           </div>
         </div>
