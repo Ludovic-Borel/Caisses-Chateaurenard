@@ -10,8 +10,12 @@ export default function RecapGrid({ data, drivers }: Props) {
 
   const fmt = (v: number) => (v === 0 ? "—" : v.toFixed(2).replace(".", ",") + " €");
 
+  // Merge active drivers with any historical drivers present in this month's data
+  // so deleted drivers still appear in past months (history preserved).
+  const allDrivers = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
+
   // Compute per-driver totals + non-returned amounts
-  const driverTotals = drivers.map((driver) => {
+  const driverTotals = allDrivers.map((driver) => {
     const driverData = data.drivers[driver];
     let totalEspeces = 0;
     let totalCB = 0;
