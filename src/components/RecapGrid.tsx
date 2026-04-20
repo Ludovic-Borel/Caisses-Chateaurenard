@@ -178,7 +178,7 @@ export default function RecapGrid({ data, drivers }: Props) {
               const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
               const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
               return (
-                <td key={`t-sum-${cat}`} colSpan={2} className="border border-border px-1 py-1.5 text-right bg-grid-total">
+                <td key={`t-sum-${cat}`} colSpan={2} className="border border-border px-1 py-1.5 bg-grid-total text-center">
                   {fmt(catE + catC)}
                 </td>
               );
