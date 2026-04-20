@@ -164,6 +164,51 @@ export default function RecapGrid({ data, drivers }: Props) {
           </tr>
         </tfoot>
       </table>
+
+      <div>
+        <h3 className="text-base font-bold text-primary mb-3">
+          Recettes par ligne et par jour
+        </h3>
+        <table className="w-full text-xs border-collapse min-w-[800px]">
+          <thead>
+            <tr className="bg-grid-header text-grid-header-foreground">
+              <th className="border border-border px-3 py-1.5 text-left">Jour</th>
+              {CATEGORIES.map((cat) => (
+                <th key={`d-h-${cat}`} className="border border-border px-2 py-1.5 text-center">
+                  {cat}
+                </th>
+              ))}
+              <th className="border border-border px-2 py-1.5 text-center">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+              <tr key={`day-${d}`} className="hover:bg-muted/50 transition-colors">
+                <td className="border border-border px-3 py-1 font-medium text-foreground">{d}</td>
+                {CATEGORIES.map((cat) => (
+                  <td key={`day-${d}-${cat}`} className="border border-border px-2 py-1 text-right">
+                    {dailyByCategory[d][cat] > 0 ? fmt(dailyByCategory[d][cat]) : "—"}
+                  </td>
+                ))}
+                <td className="border border-border px-2 py-1 text-right font-bold bg-grid-total">
+                  {dayGrandTotals[d] > 0 ? fmt(dayGrandTotals[d]) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-grid-header text-grid-header-foreground font-bold">
+              <td className="border border-border px-3 py-1.5">TOTAL</td>
+              {CATEGORIES.map((cat) => (
+                <td key={`day-t-${cat}`} className="border border-border px-2 py-1.5 text-right">
+                  {fmt(categoryDayTotals[cat])}
+                </td>
+              ))}
+              <td className="border border-border px-2 py-1.5 text-right">{fmt(overallDailyTotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }
