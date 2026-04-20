@@ -129,7 +129,7 @@ export default function RecapGrid({ data, drivers }: Props) {
               </td>
               {CATEGORIES.map((cat) => (
                 <>
-                  <td key={`${dt.driver}-${cat}-e`} className="border border-border px-1 py-1 text-right bg-grid-especes/50">
+                  <td key={`${dt.driver}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
                     {fmt(dt.categoryTotals[cat].especes)}
                   </td>
                   <td key={`${dt.driver}-${cat}-c`} className="border border-border px-1 py-1 text-right bg-grid-cb/50">
@@ -222,7 +222,7 @@ export default function RecapGrid({ data, drivers }: Props) {
                 <td className="border border-border px-3 py-1 font-medium text-foreground">{d}</td>
                 {CATEGORIES.map((cat) => (
                   <>
-                    <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 text-right bg-grid-especes/50">
+                    <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
                       {dailyByCategory[d][cat].especes > 0 ? fmt(dailyByCategory[d][cat].especes) : "—"}
                     </td>
                     <td key={`day-${d}-${cat}-c`} className="border border-border px-1 py-1 text-right bg-grid-cb/50">
