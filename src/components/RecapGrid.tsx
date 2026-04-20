@@ -8,7 +8,7 @@ interface Props {
 export default function RecapGrid({ data, drivers }: Props) {
   const daysInMonth = getDaysInMonth(data.year, data.month);
 
-  const fmt = (v: number) => v.toFixed(2).replace(".", ",") + " €";
+  const fmt = (v: number) => (v === 0 ? "—" : v.toFixed(2).replace(".", ",") + " €");
 
   // Compute per-driver totals + non-returned amounts
   const driverTotals = drivers.map((driver) => {
