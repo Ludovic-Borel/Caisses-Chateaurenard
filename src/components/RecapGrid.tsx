@@ -57,7 +57,7 @@ export default function RecapGrid({ data, drivers }: Props) {
     dailyByCategory[d] = {};
     CATEGORIES.forEach((cat) => {
       let e = 0, c = 0;
-      drivers.forEach((driver) => {
+      allDrivers.forEach((driver) => {
         const dd = data.drivers[driver];
         if (!dd) return;
         e += dd.days[d]?.[getCellKey(cat, "especes")] || 0;
