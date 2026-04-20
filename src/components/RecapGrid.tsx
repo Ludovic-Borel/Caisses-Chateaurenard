@@ -47,8 +47,35 @@ export default function RecapGrid({ data, drivers }: Props) {
     notReturned: driverTotals.reduce((s, d) => s + d.totalNotReturned, 0),
   };
 
+  // Compute per-day per-category totals (sum across all drivers, espèces + cb)
+  const dailyByCategory: Record<number, Record<string, number>> = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    dailyByCategory[d] = {};
+    CATEGORIES.forEach((cat) => {
+      let sum = 0;
+      drivers.forEach((driver) => {
+        const dd = data.drivers[driver];
+        if (!dd) return;
+        sum += (dd.days[d]?.[getCellKey(cat, "especes")] || 0)
+             + (dd.days[d]?.[getCellKey(cat, "cb")] || 0);
+      });
+      dailyByCategory[d][cat] = sum;
+    });
+  }
+
+  const categoryDayTotals: Record<string, number> = {};
+  CATEGORIES.forEach((cat) => {
+    categoryDayTotals[cat] = 0;
+    for (let d = 1; d <= daysInMonth; d++) categoryDayTotals[cat] += dailyByCategory[d][cat];
+  });
+  const dayGrandTotals: Record<number, number> = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    dayGrandTotals[d] = CATEGORIES.reduce((s, c) => s + dailyByCategory[d][c], 0);
+  }
+  const overallDailyTotal = Object.values(dayGrandTotals).reduce((s, v) => s + v, 0);
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto space-y-8">
       <h2 className="text-lg font-bold text-primary mb-3">
         Récapitulatif — {MONTH_NAMES[data.month]} {data.year}
       </h2>
