@@ -164,7 +164,11 @@ function parseDriverList(sheet: XLSX.WorkSheet): string[] {
 
 export async function importWorkbookFile(file: File): Promise<ImportResult> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array", cellStyles: true });
+  const wb = XLSX.read(buf, { type: "array" });
+
+  // Parse with ExcelJS in parallel to access font color styles
+  const ejsWb = new ExcelJS.Workbook();
+  await ejsWb.xlsx.load(buf);
 
   const my = parseMonthYearFromName(file.name);
   if (!my) {
@@ -180,7 +184,10 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
     throw new Error(`Feuille "Recap" introuvable dans "${file.name}".`);
   }
 
-  const driversData = parseRecapSheet(wb.Sheets[recapName], daysInMonth);
+  const ejsSheet = ejsWb.getWorksheet(recapName);
+  const redCells = ejsSheet ? buildRedCellSet(ejsSheet) : new Set<string>();
+
+  const driversData = parseRecapSheet(wb.Sheets[recapName], daysInMonth, redCells);
   const driversFound = Object.keys(driversData);
 
   // Also gather full driver list from "Liste Chauffeurs" if present
