@@ -271,7 +271,8 @@ export default function Index() {
         <div className="flex gap-6">
           <div className="w-64 flex-shrink-0">
             <DriverList
-              drivers={drivers}
+              drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
+              activeDrivers={drivers}
               selectedDriver={selectedDriver}
               onSelect={setSelectedDriver}
               onAddDriver={handleAddDriver}
