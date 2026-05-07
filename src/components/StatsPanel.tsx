@@ -17,6 +17,10 @@ export default function StatsPanel({ currentData, drivers }: Props) {
 
 
   const daysInMonth = getDaysInMonth(currentData.year, currentData.month);
+  const allDrivers = useMemo(
+    () => Array.from(new Set([...drivers, ...Object.keys(currentData.drivers || {})])),
+    [drivers, currentData]
+  );
 
   // Stats par ligne (catégorie)
   const statsByLine = useMemo(() => {
