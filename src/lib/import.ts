@@ -75,7 +75,7 @@ function buildRedCellSet(sheet: ExcelJS.Worksheet): Set<string> {
 }
 
 // Parse the "Recap" sheet: row 1 = driver names (every N cols), row 2 = headers, col A = day
-function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<string, DriverMonthData> {
+function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number, redCells: Set<string>): Record<string, DriverMonthData> {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
   if (aoa.length < 3) return {};
 
