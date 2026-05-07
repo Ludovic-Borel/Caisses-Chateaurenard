@@ -5,6 +5,7 @@ import { Plus, Trash2, Users, Pencil, Check, X } from "lucide-react";
 
 interface Props {
   drivers: string[];
+  activeDrivers?: string[];
   selectedDriver: string | null;
   onSelect: (driver: string | null) => void;
   onAddDriver: (name: string) => void;
@@ -12,7 +13,8 @@ interface Props {
   onRenameDriver: (oldName: string, newName: string) => void;
 }
 
-export default function DriverList({ drivers, selectedDriver, onSelect, onAddDriver, onRemoveDriver, onRenameDriver }: Props) {
+export default function DriverList({ drivers, activeDrivers, selectedDriver, onSelect, onAddDriver, onRemoveDriver, onRenameDriver }: Props) {
+  const activeSet = new Set(activeDrivers ?? drivers);
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editingDriver, setEditingDriver] = useState<string | null>(null);
