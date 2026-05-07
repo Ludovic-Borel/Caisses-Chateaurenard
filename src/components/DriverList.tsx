@@ -5,6 +5,7 @@ import { Plus, Trash2, Users, Pencil, Check, X } from "lucide-react";
 
 interface Props {
   drivers: string[];
+  activeDrivers?: string[];
   selectedDriver: string | null;
   onSelect: (driver: string | null) => void;
   onAddDriver: (name: string) => void;
@@ -12,7 +13,8 @@ interface Props {
   onRenameDriver: (oldName: string, newName: string) => void;
 }
 
-export default function DriverList({ drivers, selectedDriver, onSelect, onAddDriver, onRemoveDriver, onRenameDriver }: Props) {
+export default function DriverList({ drivers, activeDrivers, selectedDriver, onSelect, onAddDriver, onRemoveDriver, onRenameDriver }: Props) {
+  const activeSet = new Set(activeDrivers ?? drivers);
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editingDriver, setEditingDriver] = useState<string | null>(null);
@@ -72,12 +74,16 @@ export default function DriverList({ drivers, selectedDriver, onSelect, onAddDri
       )}
 
       <div className="max-h-[55vh] overflow-y-auto">
-        {drivers.map((driver) => (
+        {drivers.map((driver) => {
+          const isDeleted = !activeSet.has(driver);
+          return (
           <div
             key={driver}
             className={`group flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer transition-colors ${
               selectedDriver === driver
                 ? "bg-primary/10 text-primary font-medium"
+                : isDeleted
+                ? "hover:bg-muted text-muted-foreground italic opacity-70"
                 : "hover:bg-muted text-foreground"
             }`}
           >
@@ -129,7 +135,8 @@ export default function DriverList({ drivers, selectedDriver, onSelect, onAddDri
               </>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
