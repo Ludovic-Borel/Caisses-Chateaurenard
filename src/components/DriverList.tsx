@@ -74,7 +74,9 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
       )}
 
       <div className="max-h-[55vh] overflow-y-auto">
-        {drivers.map((driver) => (
+        {drivers.map((driver) => {
+          const isDeleted = !activeSet.has(driver);
+          return (
           <div
             key={driver}
             className={`group flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer transition-colors ${
