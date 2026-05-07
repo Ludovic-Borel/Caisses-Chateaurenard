@@ -26,7 +26,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
   const statsByLine = useMemo(() => {
     return CATEGORIES.map((cat) => {
       let especes = 0, cb = 0;
-      drivers.forEach((driver) => {
+      allDrivers.forEach((driver) => {
         const dd = currentData.drivers[driver];
         if (!dd) return;
         for (let d = 1; d <= daysInMonth; d++) {
@@ -40,7 +40,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
 
   // Stats par conducteur
   const statsByDriver = useMemo(() => {
-    return drivers.map((driver) => {
+    return allDrivers.map((driver) => {
       let especes = 0, cb = 0;
       const dd = currentData.drivers[driver];
       if (dd) {
@@ -59,7 +59,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
   const statsByDay = useMemo(() => {
     return Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
       let especes = 0, cb = 0;
-      drivers.forEach((driver) => {
+      allDrivers.forEach((driver) => {
         const dd = currentData.drivers[driver];
         if (!dd) return;
         CATEGORIES.forEach((cat) => {
@@ -97,7 +97,7 @@ export default function StatsPanel({ currentData, drivers }: Props) {
   // Stats Espèces vs CB
   const statsByPayment = useMemo(() => {
     let especes = 0, cb = 0;
-    drivers.forEach((driver) => {
+    allDrivers.forEach((driver) => {
       const dd = currentData.drivers[driver];
       if (!dd) return;
       for (let d = 1; d <= daysInMonth; d++) {
