@@ -46,22 +46,32 @@ function findSheet(wb: XLSX.WorkBook, candidates: string[]): string | null {
   return null;
 }
 
-// Detect red-ish font color from a parsed style object
-function isRedFont(style: any): boolean {
-  const c = style?.font?.color;
-  if (!c) return false;
-  const rgb: string | undefined = c.rgb || c.argb;
-  if (rgb) {
-    const hex = rgb.length === 8 ? rgb.slice(2) : rgb;
+// Detect red-ish font color from an ExcelJS color object
+function isRedExcelJSColor(color: any): boolean {
+  if (!color) return false;
+  if (typeof color.argb === "string") {
+    const hex = color.argb.length === 8 ? color.argb.slice(2) : color.argb;
     const r = parseInt(hex.slice(0, 2), 16);
     const g = parseInt(hex.slice(2, 4), 16);
     const b = parseInt(hex.slice(4, 6), 16);
     return r > 150 && g < 100 && b < 100;
   }
-  // Some files use indexed color 2 or 10 for red
-  if (typeof c.indexed === "number" && (c.indexed === 2 || c.indexed === 10)) return true;
-  if (typeof c.theme === "number" && c.theme === 5) return true; // common red accent
+  if (typeof color.indexed === "number" && (color.indexed === 2 || color.indexed === 10)) return true;
+  if (typeof color.theme === "number" && color.theme === 5) return true;
   return false;
+}
+
+// Build a set of "r,c" (1-based, matching ExcelJS) keys for cells with red font in a sheet
+function buildRedCellSet(sheet: ExcelJS.Worksheet): Set<string> {
+  const set = new Set<string>();
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      if (isRedExcelJSColor(cell.font?.color)) {
+        set.add(`${rowNumber},${colNumber}`);
+      }
+    });
+  });
+  return set;
 }
 
 // Parse the "Recap" sheet: row 1 = driver names (every N cols), row 2 = headers, col A = day
