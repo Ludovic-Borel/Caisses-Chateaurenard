@@ -23,7 +23,10 @@ export default function Dashboard({ currentData, drivers }: Props) {
 
     CATEGORIES.forEach(c => catTotals[c] = 0);
 
-    drivers.forEach(driver => {
+    // Include historical drivers present in this month's data (deleted drivers)
+    const allDrivers = Array.from(new Set([...drivers, ...Object.keys(currentData.drivers || {})]));
+
+    allDrivers.forEach(driver => {
       const dd = currentData.drivers[driver];
       let dEsp = 0, dCB = 0, dNR = 0;
       if (dd) {
