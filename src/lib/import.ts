@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { MonthData, CATEGORIES, getCellKey, getDaysInMonth, MONTH_NAMES, DriverMonthData, Category } from "./types";
 
 export interface ImportResult {
@@ -45,26 +46,36 @@ function findSheet(wb: XLSX.WorkBook, candidates: string[]): string | null {
   return null;
 }
 
-// Detect red-ish font color from a parsed style object
-function isRedFont(style: any): boolean {
-  const c = style?.font?.color;
-  if (!c) return false;
-  const rgb: string | undefined = c.rgb || c.argb;
-  if (rgb) {
-    const hex = rgb.length === 8 ? rgb.slice(2) : rgb;
+// Detect red-ish font color from an ExcelJS color object
+function isRedExcelJSColor(color: any): boolean {
+  if (!color) return false;
+  if (typeof color.argb === "string") {
+    const hex = color.argb.length === 8 ? color.argb.slice(2) : color.argb;
     const r = parseInt(hex.slice(0, 2), 16);
     const g = parseInt(hex.slice(2, 4), 16);
     const b = parseInt(hex.slice(4, 6), 16);
     return r > 150 && g < 100 && b < 100;
   }
-  // Some files use indexed color 2 or 10 for red
-  if (typeof c.indexed === "number" && (c.indexed === 2 || c.indexed === 10)) return true;
-  if (typeof c.theme === "number" && c.theme === 5) return true; // common red accent
+  if (typeof color.indexed === "number" && (color.indexed === 2 || color.indexed === 10)) return true;
+  if (typeof color.theme === "number" && color.theme === 5) return true;
   return false;
 }
 
+// Build a set of "r,c" (1-based, matching ExcelJS) keys for cells with red font in a sheet
+function buildRedCellSet(sheet: ExcelJS.Worksheet): Set<string> {
+  const set = new Set<string>();
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      if (isRedExcelJSColor(cell.font?.color)) {
+        set.add(`${rowNumber},${colNumber}`);
+      }
+    });
+  });
+  return set;
+}
+
 // Parse the "Recap" sheet: row 1 = driver names (every N cols), row 2 = headers, col A = day
-function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<string, DriverMonthData> {
+function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number, redCells: Set<string>): Record<string, DriverMonthData> {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
   if (aoa.length < 3) return {};
 
@@ -119,10 +130,8 @@ function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<str
         if (num !== 0) {
           dayEntry[getCellKey(cat, pay)] = num;
           hasValue = true;
-          // Check cell style for red font => non rendu
-          const addr = XLSX.utils.encode_cell({ c: col, r });
-          const cell: any = (sheet as any)[addr];
-          if (cell && isRedFont(cell.s)) {
+          // Check cell style for red font => non rendu (ExcelJS uses 1-based row/col)
+          if (redCells.has(`${r + 1},${col + 1}`)) {
             dd.notReturned![`${day}_${cat}_${pay}`] = true;
           }
         }
@@ -155,7 +164,11 @@ function parseDriverList(sheet: XLSX.WorkSheet): string[] {
 
 export async function importWorkbookFile(file: File): Promise<ImportResult> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array", cellStyles: true });
+  const wb = XLSX.read(buf, { type: "array" });
+
+  // Parse with ExcelJS in parallel to access font color styles
+  const ejsWb = new ExcelJS.Workbook();
+  await ejsWb.xlsx.load(buf);
 
   const my = parseMonthYearFromName(file.name);
   if (!my) {
@@ -171,7 +184,10 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
     throw new Error(`Feuille "Recap" introuvable dans "${file.name}".`);
   }
 
-  const driversData = parseRecapSheet(wb.Sheets[recapName], daysInMonth);
+  const ejsSheet = ejsWb.getWorksheet(recapName);
+  const redCells = ejsSheet ? buildRedCellSet(ejsSheet) : new Set<string>();
+
+  const driversData = parseRecapSheet(wb.Sheets[recapName], daysInMonth, redCells);
   const driversFound = Object.keys(driversData);
 
   // Also gather full driver list from "Liste Chauffeurs" if present
