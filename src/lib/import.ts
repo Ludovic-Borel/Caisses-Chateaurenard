@@ -155,7 +155,7 @@ function parseDriverList(sheet: XLSX.WorkSheet): string[] {
 
 export async function importWorkbookFile(file: File): Promise<ImportResult> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
+  const wb = XLSX.read(buf, { type: "array", cellStyles: true });
 
   const my = parseMonthYearFromName(file.name);
   if (!my) {
