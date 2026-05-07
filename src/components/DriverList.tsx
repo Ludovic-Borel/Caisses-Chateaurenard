@@ -82,6 +82,8 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
             className={`group flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer transition-colors ${
               selectedDriver === driver
                 ? "bg-primary/10 text-primary font-medium"
+                : isDeleted
+                ? "hover:bg-muted text-muted-foreground italic opacity-70"
                 : "hover:bg-muted text-foreground"
             }`}
           >
