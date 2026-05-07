@@ -45,6 +45,24 @@ function findSheet(wb: XLSX.WorkBook, candidates: string[]): string | null {
   return null;
 }
 
+// Detect red-ish font color from a parsed style object
+function isRedFont(style: any): boolean {
+  const c = style?.font?.color;
+  if (!c) return false;
+  const rgb: string | undefined = c.rgb || c.argb;
+  if (rgb) {
+    const hex = rgb.length === 8 ? rgb.slice(2) : rgb;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return r > 150 && g < 100 && b < 100;
+  }
+  // Some files use indexed color 2 or 10 for red
+  if (typeof c.indexed === "number" && (c.indexed === 2 || c.indexed === 10)) return true;
+  if (typeof c.theme === "number" && c.theme === 5) return true; // common red accent
+  return false;
+}
+
 // Parse the "Recap" sheet: row 1 = driver names (every N cols), row 2 = headers, col A = day
 function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<string, DriverMonthData> {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null });
@@ -86,7 +104,7 @@ function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<str
     }
     if (blockMap.length === 0) return;
 
-    const dd: DriverMonthData = { days: {} };
+    const dd: DriverMonthData = { days: {}, notReturned: {} };
     // Day rows start at aoa index 2 (row 3)
     for (let r = 2; r < aoa.length; r++) {
       const row = aoa[r] as unknown[];
@@ -101,10 +119,17 @@ function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number): Record<str
         if (num !== 0) {
           dayEntry[getCellKey(cat, pay)] = num;
           hasValue = true;
+          // Check cell style for red font => non rendu
+          const addr = XLSX.utils.encode_cell({ c: col, r });
+          const cell: any = (sheet as any)[addr];
+          if (cell && isRedFont(cell.s)) {
+            dd.notReturned![`${day}_${cat}_${pay}`] = true;
+          }
         }
       });
       if (hasValue) dd.days[day] = dayEntry;
     }
+    if (Object.keys(dd.notReturned!).length === 0) delete dd.notReturned;
     if (Object.keys(dd.days).length > 0) {
       result[block.name] = dd;
     }
