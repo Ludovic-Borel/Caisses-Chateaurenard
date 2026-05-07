@@ -130,10 +130,8 @@ function parseRecapSheet(sheet: XLSX.WorkSheet, daysInMonth: number, redCells: S
         if (num !== 0) {
           dayEntry[getCellKey(cat, pay)] = num;
           hasValue = true;
-          // Check cell style for red font => non rendu
-          const addr = XLSX.utils.encode_cell({ c: col, r });
-          const cell: any = (sheet as any)[addr];
-          if (cell && isRedFont(cell.s)) {
+          // Check cell style for red font => non rendu (ExcelJS uses 1-based row/col)
+          if (redCells.has(`${r + 1},${col + 1}`)) {
             dd.notReturned![`${day}_${cat}_${pay}`] = true;
           }
         }
