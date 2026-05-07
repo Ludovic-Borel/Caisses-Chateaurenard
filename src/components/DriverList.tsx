@@ -135,7 +135,8 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
               </>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
