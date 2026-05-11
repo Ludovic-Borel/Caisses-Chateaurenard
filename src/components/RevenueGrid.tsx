@@ -286,17 +286,28 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
         <tfoot>
           <tr className="bg-grid-header text-grid-header-foreground font-bold">
             <td className="border border-border px-2 py-1.5">Total</td>
-            {CATEGORIES.map((cat) =>
-              PAYMENT_TYPES.map((pt) => (
-                <td
-                  key={`t-${cat}-${pt}`}
-                  className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
-                  style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
-                >
-                  {fmt(getColumnTotal(cat, pt))}
-                </td>
-              ))
-            )}
+            {CATEGORIES.map((cat) => (
+              <>
+                {PAYMENT_TYPES.map((pt) => (
+                  <td
+                    key={`t-${cat}-${pt}`}
+                    className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
+                    style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  >
+                    {fmt(getColumnTotal(cat, pt))}
+                  </td>
+                ))}
+                {extractionMode && (
+                  <td
+                    key={`t-${cat}-x`}
+                    className="border border-border px-2 py-1.5 text-right bg-muted/40"
+                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  >
+                    {(() => { const t = getColumnExtractTotal(cat); return t ? fmt(t) : "—"; })()}
+                  </td>
+                )}
+              </>
+            ))}
             <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
           </tr>
           <tr className="bg-secondary font-semibold text-sm">
@@ -306,7 +317,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             <td className="border border-border px-2 py-2" colSpan={5}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-right" colSpan={CATEGORIES.length * 2 - 6}>
+            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 3 : 2)) - 6}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>
