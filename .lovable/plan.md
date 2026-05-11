@@ -1,28 +1,67 @@
+## Objectif
 
+Ajouter un bouton **Extraction** à gauche du bouton **Importer Excel**. Quand on clique dessus, l'application ouvre directement la grille **Recettes** du premier chauffeur de la liste, avec, en plus des colonnes existantes (`704 Esp.` / `704 CB`, `705 Esp.` / `705 CB`, …), une troisième colonne **`Extract`** pour chaque ligne (704, 705, 707, 708, 915, Scolaires).
 
-## Plan
+Cette nouvelle colonne `Extract` est créée vide pour le moment ; elle sera alimentée plus tard par l'import d'un fichier dédié (étape suivante, hors de ce plan).
 
-### 1. Header toolbar layout
-In `src/pages/Index.tsx`, restructure the toolbar row so navigation buttons stay on the left and the import/export buttons move to the right:
-- Wrap the toolbar in `flex justify-between` with two groups.
-- **Left group**: `MonthSelector`, `Tableau de bord`, `Récap global`, loading indicator.
-- **Right group**: `Importer Excel`, `Exporter Excel` (still conditional on past month).
+## Comportement utilisateur
 
-### 2. Default to Dashboard + persistence across navigation
-- Initial `selectedDriver` state becomes `"__dashboard__"` instead of `null` so the Dashboard shows immediately on load.
-- In `handleMonthChange`, **remove** the `setSelectedDriver(null)` line — the current view (Dashboard, Récap, or driver) stays when changing months.
-- The user explicitly switches to Récap global by clicking the button, or to a driver by clicking it in the list (existing behavior already does this).
+- Nouveau bouton **Extraction** (icône type "scan / download") placé à gauche de **Importer Excel** dans la barre d'actions.
+- Au clic :
+  - Le mode "extraction" est activé.
+  - Le chauffeur sélectionné devient automatiquement le **premier de la liste triée** (chauffeurs actifs, sinon premier chauffeur historique présent dans le mois).
+  - La grille `RevenueGrid` du chauffeur s'affiche avec, pour chaque catégorie, **3 colonnes** au lieu de 2 : `Esp.`, `CB`, `Extract`.
+- Tant que le mode extraction est actif, la 3ᵉ colonne `Extract` est visible pour **tous** les chauffeurs sur lesquels on navigue (cohérence d'affichage).
+- Le passage au Tableau de bord, Récap global ou Stats désactive automatiquement le mode extraction.
+- Les valeurs `Extract` sont **éditables manuellement** (mêmes règles de saisie rapide que les autres cellules) et **persistées** comme le reste des données du mois — pour pouvoir être écrasées plus tard par l'import.
+- Les colonnes `Extract` ne sont **pas** prises en compte dans les totaux Espèces / CB / Total existants ni dans le récap global, le tableau de bord ou les stats. Un sous-total `Extract` est affiché en bas de chaque colonne `Extract` uniquement.
 
-### 3. Driver removal — keep history, only remove for current + future months
-Rewrite `handleRemoveDriver`:
-- Still remove the driver from the global `drivers` list (so it disappears from the sidebar going forward).
-- For the **current month**, remove their entry from `data.drivers` (debounced save will persist).
-- For **future months** (year/month strictly greater than current displayed month), call `loadAllMonths()`, filter to months `> (data.year, data.month)`, strip the driver from each, and `saveMonth` them.
-- **Past months** are untouched: their `data.drivers[name]` stays intact, preserving history.
-- Note: since the global driver list is removed, `RecapGrid` for past months won't list the deleted driver in its rows. To keep historical recaps showing them, `RecapGrid` already iterates over the `drivers` prop. We'll accept this limitation for now (driver disappears from sidebar/recap going forward but raw data is preserved in DB and re-adding the same name restores visibility).
+## Impacts visuels
 
-### Technical notes
-- `loadAllMonths` already exists in `src/lib/storage.ts`.
-- Removing a driver fires a deletion of the driver row in Supabase (`saveDrivers` diff). Past `month_data.data.drivers[name]` JSONB entries stay intact regardless.
-- No schema changes needed.
+- En-tête de catégorie passe de `colSpan={2}` à `colSpan={3}` quand le mode extraction est actif.
+- Sous-en-tête : ajout d'une cellule `Extract` à fond neutre (token existant, ex. `bg-muted` ou nouveau token léger), distincte des fonds Espèces / CB.
+- Colonne `Total` du jour et `Total` de la colonne : inchangés (Extract exclu).
+- Le bouton **Extraction** suit le style des autres boutons `outline` de la barre.
 
+## Détails techniques
+
+### Modèle de données
+
+Étendre `DriverMonthData` dans `src/lib/types.ts` :
+
+```ts
+export interface DriverMonthData {
+  days: Record<number, DayEntry>;
+  notReturned?: Record<string, boolean>;
+  extracts?: Record<number, Partial<Record<Category, number>>>; // jour -> catégorie -> montant
+}
+```
+
+Pas de modification de `PAYMENT_TYPES` (pour ne pas casser Recap / Stats / Dashboard / export Excel).
+
+### Composants
+
+- **`src/pages/Index.tsx`**
+  - Nouvel état `extractionMode: boolean`.
+  - Nouveau bouton `Extraction` (icône `lucide-react`, ex. `ScanLine` ou `FileSearch`) à gauche du bouton `Importer Excel`.
+  - Handler : active `extractionMode`, sélectionne le premier chauffeur de `Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()[0]`. Toast d'info si aucun chauffeur.
+  - Désactiver `extractionMode` quand on choisit Tableau de bord, Récap global ou Stats.
+  - Passer `extractionMode` en prop à `RevenueGrid` (et seulement à lui).
+
+- **`src/components/RevenueGrid.tsx`**
+  - Nouvelle prop optionnelle `extractionMode?: boolean`.
+  - Quand `true` :
+    - Headers de catégorie en `colSpan={3}`.
+    - Ajouter une 3ᵉ sous-cellule `Extract` après `CB`.
+    - Pour chaque jour, ajouter une `<td>` éditable liée à `data.extracts?.[day]?.[cat]`.
+    - Helpers : `getExtract(day, cat)`, `setExtract(day, cat, value)` — `setExtract` met à jour `data.extracts` via `onChange`.
+    - Sous-total par colonne `Extract` dans le `tfoot` ; `colSpan` du Total existant ajusté en conséquence.
+    - Les colonnes `Extract` n'entrent **pas** dans `getDayTotal`, `getColumnTotal`, `getGrandTotal`, `getTotalEspeces`, `getTotalCB`.
+
+### Persistance
+
+Aucune migration nécessaire : le champ `extracts` est optionnel et JSON, déjà compatible avec la table `month_data` (jsonb) et le `localStorage` dynamique par mois.
+
+### Hors périmètre (étape suivante)
+
+- L'import du fichier qui alimentera la colonne `Extract` n'est pas implémenté ici. Un emplacement clair sera prévu dans `src/lib/import.ts` lors de la prochaine itération.
