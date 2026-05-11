@@ -51,25 +51,27 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
     [data, onChange]
   );
 
-  const getExtract = (day: number, cat: string): number => {
-    return data.extracts?.[day]?.[cat as any] || 0;
+  const getExtract = (day: number, cat: string, pt: string): number => {
+    return data.extracts?.[day]?.[getCellKey(cat as any, pt as any)] || 0;
   };
 
   const setExtract = useCallback(
-    (day: number, cat: string, value: number) => {
+    (day: number, cat: string, pt: string, value: number) => {
       if (!onChange) return;
+      const key = getCellKey(cat as any, pt as any);
       const dayExtracts = { ...(data.extracts?.[day] || {}) };
-      if (value) dayExtracts[cat as any] = value;
-      else delete dayExtracts[cat as any];
+      if (value) dayExtracts[key] = value;
+      else delete dayExtracts[key];
       const newExtracts = { ...(data.extracts || {}), [day]: dayExtracts };
       onChange({ ...data, extracts: newExtracts });
     },
     [data, onChange]
   );
 
-  const getColumnExtractTotal = (cat: string): number => {
+  const getColumnExtractTotal = (cat: string, pt: string): number => {
     let t = 0;
-    for (let d = 1; d <= daysInMonth; d++) t += getExtract(d, cat);
+    const key = getCellKey(cat as any, pt as any);
+    for (let d = 1; d <= daysInMonth; d++) t += data.extracts?.[d]?.[key] || 0;
     return t;
   };
 
@@ -112,7 +114,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             {CATEGORIES.map((cat) => (
               <th
                 key={cat}
-                colSpan={extractionMode ? 3 : 2}
+                colSpan={extractionMode ? 4 : 2}
                 className="border border-border px-2 py-1.5 text-center"
               >
                 {cat}
@@ -139,13 +141,22 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                   CB
                 </th>
                 {extractionMode && (
-                  <th
-                    key={`${cat}-x`}
-                    className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
-                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg } : undefined}
-                  >
-                    Extract
-                  </th>
+                  <>
+                    <th
+                      key={`${cat}-xe`}
+                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      style={hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
+                    >
+                      Ext. Esp.
+                    </th>
+                    <th
+                      key={`${cat}-xc`}
+                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      style={hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
+                    >
+                      Ext. CB
+                    </th>
+                  </>
                 )}
               </>
             ))}
@@ -229,14 +240,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                     </td>
                   );
                   })}
-                  {extractionMode && (() => {
-                    const xVal = getExtract(day, cat);
-                    const xKey = `${cat}_extract`;
+                  {extractionMode && PAYMENT_TYPES.map((pt) => {
+                    const xVal = getExtract(day, cat, pt);
+                    const xKey = `${cat}_extract_${pt}`;
                     const isHl = hoverDay === day || hoverCol === xKey;
-                    const editKey = `${day}-${cat}-extract`;
+                    const editKey = `${day}-${cat}-extract-${pt}`;
                     return (
                       <td
-                        key={`${day}-${cat}-x`}
+                        key={`${day}-${cat}-x-${pt}`}
                         className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
                         style={isHl ? { backgroundColor: hlBg } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
@@ -258,7 +269,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                setExtract(day, cat, parsed);
+                                setExtract(day, cat, pt, parsed);
                                 setEditingCell(null);
                                 (e.target as HTMLInputElement).blur();
                               }
@@ -266,7 +277,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                             onBlur={() => {
                               if (editingCell === editKey) {
                                 const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                setExtract(day, cat, parsed);
+                                setExtract(day, cat, pt, parsed);
                                 setEditingCell(null);
                               }
                             }}
@@ -274,7 +285,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                         )}
                       </td>
                     );
-                  })()}
+                  })}
                 </>
               ))}
               <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
@@ -297,15 +308,15 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                     {fmt(getColumnTotal(cat, pt))}
                   </td>
                 ))}
-                {extractionMode && (
+                {extractionMode && PAYMENT_TYPES.map((pt) => (
                   <td
-                    key={`t-${cat}-x`}
+                    key={`t-${cat}-x-${pt}`}
                     className="border border-border px-2 py-1.5 text-right bg-muted/40"
-                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                    style={hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
-                    {(() => { const t = getColumnExtractTotal(cat); return t ? fmt(t) : "—"; })()}
+                    {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}
                   </td>
-                )}
+                ))}
               </>
             ))}
             <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
@@ -317,7 +328,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             <td className="border border-border px-2 py-2" colSpan={5}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 3 : 2)) - 6}>
+            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 4 : 2)) - 6}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>
