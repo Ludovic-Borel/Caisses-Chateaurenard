@@ -328,7 +328,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             <td className="border border-border px-2 py-2" colSpan={5}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 3 : 2)) - 6}>
+            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 4 : 2)) - 6}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>
