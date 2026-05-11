@@ -11,7 +11,7 @@ export interface DayEntry {
 export interface DriverMonthData {
   days: Record<number, DayEntry>; // day 1-31
   notReturned?: Record<string, boolean>; // key = `${day}_${category}_${paymentType}`
-  extracts?: Record<number, Partial<Record<Category, number>>>; // day -> category -> amount
+  extracts?: Record<number, DayEntry>; // day -> extract entries (keys = `${category}_${paymentType}`)
 }
 
 // Full month with all drivers
