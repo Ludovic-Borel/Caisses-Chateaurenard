@@ -24,6 +24,7 @@ export default function Index() {
   const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
+  const [extractionMode, setExtractionMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
