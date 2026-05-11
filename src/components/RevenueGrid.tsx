@@ -240,14 +240,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                     </td>
                   );
                   })}
-                  {extractionMode && (() => {
-                    const xVal = getExtract(day, cat);
-                    const xKey = `${cat}_extract`;
+                  {extractionMode && PAYMENT_TYPES.map((pt) => {
+                    const xVal = getExtract(day, cat, pt);
+                    const xKey = `${cat}_extract_${pt}`;
                     const isHl = hoverDay === day || hoverCol === xKey;
-                    const editKey = `${day}-${cat}-extract`;
+                    const editKey = `${day}-${cat}-extract-${pt}`;
                     return (
                       <td
-                        key={`${day}-${cat}-x`}
+                        key={`${day}-${cat}-x-${pt}`}
                         className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
                         style={isHl ? { backgroundColor: hlBg } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
@@ -269,7 +269,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                setExtract(day, cat, parsed);
+                                setExtract(day, cat, pt, parsed);
                                 setEditingCell(null);
                                 (e.target as HTMLInputElement).blur();
                               }
@@ -277,7 +277,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                             onBlur={() => {
                               if (editingCell === editKey) {
                                 const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                setExtract(day, cat, parsed);
+                                setExtract(day, cat, pt, parsed);
                                 setEditingCell(null);
                               }
                             }}
@@ -285,7 +285,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                         )}
                       </td>
                     );
-                  })()}
+                  })}
                 </>
               ))}
               <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
