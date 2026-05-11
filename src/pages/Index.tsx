@@ -314,6 +314,7 @@ export default function Index() {
                     data={data.drivers[selectedDriver] || { days: {} }}
                     daysInMonth={daysInMonth}
                     onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
+                    extractionMode={extractionMode}
                   />
                   <RecapGrid data={data} drivers={drivers} />
                 </div>
