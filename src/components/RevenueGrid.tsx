@@ -161,8 +161,9 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
               >
                 {day}
               </td>
-              {CATEGORIES.map((cat) =>
-                PAYMENT_TYPES.map((pt) => {
+              {CATEGORIES.map((cat) => (
+                <>
+                  {PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
                   const colKey = `${cat}_${pt}`;
@@ -227,8 +228,55 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                       </div>
                     </td>
                   );
-                })
-              )}
+                  })}
+                  {extractionMode && (() => {
+                    const xVal = getExtract(day, cat);
+                    const xKey = `${cat}_extract`;
+                    const isHl = hoverDay === day || hoverCol === xKey;
+                    const editKey = `${day}-${cat}-extract`;
+                    return (
+                      <td
+                        key={`${day}-${cat}-x`}
+                        className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
+                        style={isHl ? { backgroundColor: hlBg } : undefined}
+                        onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
+                      >
+                        {readOnly ? (
+                          <span className="block px-1 py-0.5 text-right w-full">{xVal ? fmt(xVal) : ""}</span>
+                        ) : (
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs"
+                            value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
+                            onFocus={() => {
+                              setHoverDay(day); setHoverCol(xKey);
+                              setEditingCell(editKey);
+                              setEditValue(xVal ? xVal.toString().replace(".", ",") : "");
+                            }}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                setExtract(day, cat, parsed);
+                                setEditingCell(null);
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            onBlur={() => {
+                              if (editingCell === editKey) {
+                                const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                setExtract(day, cat, parsed);
+                                setEditingCell(null);
+                              }
+                            }}
+                          />
+                        )}
+                      </td>
+                    );
+                  })()}
+                </>
+              ))}
               <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
                 {fmt(getDayTotal(day))}
               </td>
