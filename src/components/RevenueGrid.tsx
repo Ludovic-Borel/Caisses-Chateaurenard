@@ -51,6 +51,28 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
     [data, onChange]
   );
 
+  const getExtract = (day: number, cat: string): number => {
+    return data.extracts?.[day]?.[cat as any] || 0;
+  };
+
+  const setExtract = useCallback(
+    (day: number, cat: string, value: number) => {
+      if (!onChange) return;
+      const dayExtracts = { ...(data.extracts?.[day] || {}) };
+      if (value) dayExtracts[cat as any] = value;
+      else delete dayExtracts[cat as any];
+      const newExtracts = { ...(data.extracts || {}), [day]: dayExtracts };
+      onChange({ ...data, extracts: newExtracts });
+    },
+    [data, onChange]
+  );
+
+  const getColumnExtractTotal = (cat: string): number => {
+    let t = 0;
+    for (let d = 1; d <= daysInMonth; d++) t += getExtract(d, cat);
+    return t;
+  };
+
   const getDayTotal = (day: number): number => {
     const entry = data.days[day];
     if (!entry) return 0;
