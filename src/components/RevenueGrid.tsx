@@ -308,15 +308,15 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                     {fmt(getColumnTotal(cat, pt))}
                   </td>
                 ))}
-                {extractionMode && (
+                {extractionMode && PAYMENT_TYPES.map((pt) => (
                   <td
-                    key={`t-${cat}-x`}
+                    key={`t-${cat}-x-${pt}`}
                     className="border border-border px-2 py-1.5 text-right bg-muted/40"
-                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                    style={hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
-                    {(() => { const t = getColumnExtractTotal(cat); return t ? fmt(t) : "—"; })()}
+                    {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}
                   </td>
-                )}
+                ))}
               </>
             ))}
             <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
