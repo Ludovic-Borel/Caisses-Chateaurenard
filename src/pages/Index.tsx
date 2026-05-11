@@ -289,7 +289,10 @@ export default function Index() {
               drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
               activeDrivers={drivers}
               selectedDriver={selectedDriver}
-              onSelect={setSelectedDriver}
+              onSelect={(d) => {
+                if (d === "__stats__" || d === "__dashboard__" || d === null) setExtractionMode(false);
+                setSelectedDriver(d);
+              }}
               onAddDriver={handleAddDriver}
               onRemoveDriver={handleRemoveDriver}
               onRenameDriver={handleRenameDriver}
