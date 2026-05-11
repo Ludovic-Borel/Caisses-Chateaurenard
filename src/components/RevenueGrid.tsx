@@ -114,7 +114,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             {CATEGORIES.map((cat) => (
               <th
                 key={cat}
-                colSpan={extractionMode ? 3 : 2}
+                colSpan={extractionMode ? 4 : 2}
                 className="border border-border px-2 py-1.5 text-center"
               >
                 {cat}
@@ -141,13 +141,22 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                   CB
                 </th>
                 {extractionMode && (
-                  <th
-                    key={`${cat}-x`}
-                    className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
-                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg } : undefined}
-                  >
-                    Extract
-                  </th>
+                  <>
+                    <th
+                      key={`${cat}-xe`}
+                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      style={hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
+                    >
+                      Ext. Esp.
+                    </th>
+                    <th
+                      key={`${cat}-xc`}
+                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      style={hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
+                    >
+                      Ext. CB
+                    </th>
+                  </>
                 )}
               </>
             ))}
