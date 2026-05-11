@@ -11,7 +11,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, TableProperties, LayoutDashboard, Loader2, Upload } from "lucide-react";
+import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -24,6 +24,7 @@ export default function Index() {
   const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
+  const [extractionMode, setExtractionMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
@@ -228,13 +229,13 @@ export default function Index() {
           <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
           <Button
             variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
-            onClick={() => setSelectedDriver("__dashboard__")}
+            onClick={() => { setExtractionMode(false); setSelectedDriver("__dashboard__"); }}
           >
             <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
           </Button>
           <Button
             variant={selectedDriver === null ? "default" : "outline"}
-            onClick={() => setSelectedDriver(null)}
+            onClick={() => { setExtractionMode(false); setSelectedDriver(null); }}
           >
             <TableProperties className="h-4 w-4 mr-2" /> Récap global
           </Button>
@@ -245,6 +246,20 @@ export default function Index() {
           )}
         </div>
         <div className="flex items-center flex-wrap gap-3">
+          <Button
+            variant={extractionMode ? "default" : "outline"}
+            onClick={() => {
+              const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
+              if (list.length === 0) {
+                toast.error("Aucun chauffeur disponible");
+                return;
+              }
+              setExtractionMode(true);
+              setSelectedDriver(list[0]);
+            }}
+          >
+            <ScanLine className="h-4 w-4 mr-2" /> Extraction
+          </Button>
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
@@ -274,7 +289,10 @@ export default function Index() {
               drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
               activeDrivers={drivers}
               selectedDriver={selectedDriver}
-              onSelect={setSelectedDriver}
+              onSelect={(d) => {
+                if (d === "__stats__" || d === "__dashboard__" || d === null) setExtractionMode(false);
+                setSelectedDriver(d);
+              }}
               onAddDriver={handleAddDriver}
               onRemoveDriver={handleRemoveDriver}
               onRenameDriver={handleRenameDriver}
@@ -296,6 +314,7 @@ export default function Index() {
                     data={data.drivers[selectedDriver] || { days: {} }}
                     daysInMonth={daysInMonth}
                     onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
+                    extractionMode={extractionMode}
                   />
                   <RecapGrid data={data} drivers={drivers} />
                 </div>

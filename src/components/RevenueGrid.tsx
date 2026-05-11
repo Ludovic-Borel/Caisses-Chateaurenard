@@ -7,9 +7,10 @@ interface Props {
   title?: string;
   onChange?: (data: DriverMonthData) => void;
   readOnly?: boolean;
+  extractionMode?: boolean;
 }
 
-export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
+export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false, extractionMode = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverCol, setHoverCol] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -50,6 +51,28 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
     [data, onChange]
   );
 
+  const getExtract = (day: number, cat: string): number => {
+    return data.extracts?.[day]?.[cat as any] || 0;
+  };
+
+  const setExtract = useCallback(
+    (day: number, cat: string, value: number) => {
+      if (!onChange) return;
+      const dayExtracts = { ...(data.extracts?.[day] || {}) };
+      if (value) dayExtracts[cat as any] = value;
+      else delete dayExtracts[cat as any];
+      const newExtracts = { ...(data.extracts || {}), [day]: dayExtracts };
+      onChange({ ...data, extracts: newExtracts });
+    },
+    [data, onChange]
+  );
+
+  const getColumnExtractTotal = (cat: string): number => {
+    let t = 0;
+    for (let d = 1; d <= daysInMonth; d++) t += getExtract(d, cat);
+    return t;
+  };
+
   const getDayTotal = (day: number): number => {
     const entry = data.days[day];
     if (!entry) return 0;
@@ -89,7 +112,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             {CATEGORIES.map((cat) => (
               <th
                 key={cat}
-                colSpan={2}
+                colSpan={extractionMode ? 3 : 2}
                 className="border border-border px-2 py-1.5 text-center"
               >
                 {cat}
@@ -115,6 +138,15 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 >
                   CB
                 </th>
+                {extractionMode && (
+                  <th
+                    key={`${cat}-x`}
+                    className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg } : undefined}
+                  >
+                    Extract
+                  </th>
+                )}
               </>
             ))}
             <th className="border border-border px-2 py-1"></th>
@@ -129,8 +161,9 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
               >
                 {day}
               </td>
-              {CATEGORIES.map((cat) =>
-                PAYMENT_TYPES.map((pt) => {
+              {CATEGORIES.map((cat) => (
+                <>
+                  {PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
                   const colKey = `${cat}_${pt}`;
@@ -195,8 +228,55 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                       </div>
                     </td>
                   );
-                })
-              )}
+                  })}
+                  {extractionMode && (() => {
+                    const xVal = getExtract(day, cat);
+                    const xKey = `${cat}_extract`;
+                    const isHl = hoverDay === day || hoverCol === xKey;
+                    const editKey = `${day}-${cat}-extract`;
+                    return (
+                      <td
+                        key={`${day}-${cat}-x`}
+                        className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
+                        style={isHl ? { backgroundColor: hlBg } : undefined}
+                        onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
+                      >
+                        {readOnly ? (
+                          <span className="block px-1 py-0.5 text-right w-full">{xVal ? fmt(xVal) : ""}</span>
+                        ) : (
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs"
+                            value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
+                            onFocus={() => {
+                              setHoverDay(day); setHoverCol(xKey);
+                              setEditingCell(editKey);
+                              setEditValue(xVal ? xVal.toString().replace(".", ",") : "");
+                            }}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                setExtract(day, cat, parsed);
+                                setEditingCell(null);
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            onBlur={() => {
+                              if (editingCell === editKey) {
+                                const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                setExtract(day, cat, parsed);
+                                setEditingCell(null);
+                              }
+                            }}
+                          />
+                        )}
+                      </td>
+                    );
+                  })()}
+                </>
+              ))}
               <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
                 {fmt(getDayTotal(day))}
               </td>
@@ -206,17 +286,28 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
         <tfoot>
           <tr className="bg-grid-header text-grid-header-foreground font-bold">
             <td className="border border-border px-2 py-1.5">Total</td>
-            {CATEGORIES.map((cat) =>
-              PAYMENT_TYPES.map((pt) => (
-                <td
-                  key={`t-${cat}-${pt}`}
-                  className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
-                  style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
-                >
-                  {fmt(getColumnTotal(cat, pt))}
-                </td>
-              ))
-            )}
+            {CATEGORIES.map((cat) => (
+              <>
+                {PAYMENT_TYPES.map((pt) => (
+                  <td
+                    key={`t-${cat}-${pt}`}
+                    className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
+                    style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  >
+                    {fmt(getColumnTotal(cat, pt))}
+                  </td>
+                ))}
+                {extractionMode && (
+                  <td
+                    key={`t-${cat}-x`}
+                    className="border border-border px-2 py-1.5 text-right bg-muted/40"
+                    style={hoverCol === `${cat}_extract` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                  >
+                    {(() => { const t = getColumnExtractTotal(cat); return t ? fmt(t) : "—"; })()}
+                  </td>
+                )}
+              </>
+            ))}
             <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
           </tr>
           <tr className="bg-secondary font-semibold text-sm">
@@ -226,7 +317,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
             <td className="border border-border px-2 py-2" colSpan={5}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-right" colSpan={CATEGORIES.length * 2 - 6}>
+            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 3 : 2)) - 6}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>
