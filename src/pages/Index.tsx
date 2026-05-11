@@ -229,13 +229,13 @@ export default function Index() {
           <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
           <Button
             variant={selectedDriver === "__dashboard__" ? "default" : "outline"}
-            onClick={() => setSelectedDriver("__dashboard__")}
+            onClick={() => { setExtractionMode(false); setSelectedDriver("__dashboard__"); }}
           >
             <LayoutDashboard className="h-4 w-4 mr-2" /> Tableau de bord
           </Button>
           <Button
             variant={selectedDriver === null ? "default" : "outline"}
-            onClick={() => setSelectedDriver(null)}
+            onClick={() => { setExtractionMode(false); setSelectedDriver(null); }}
           >
             <TableProperties className="h-4 w-4 mr-2" /> Récap global
           </Button>
@@ -246,6 +246,20 @@ export default function Index() {
           )}
         </div>
         <div className="flex items-center flex-wrap gap-3">
+          <Button
+            variant={extractionMode ? "default" : "outline"}
+            onClick={() => {
+              const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
+              if (list.length === 0) {
+                toast.error("Aucun chauffeur disponible");
+                return;
+              }
+              setExtractionMode(true);
+              setSelectedDriver(list[0]);
+            }}
+          >
+            <ScanLine className="h-4 w-4 mr-2" /> Extraction
+          </Button>
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
