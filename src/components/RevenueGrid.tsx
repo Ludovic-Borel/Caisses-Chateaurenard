@@ -7,9 +7,10 @@ interface Props {
   title?: string;
   onChange?: (data: DriverMonthData) => void;
   readOnly?: boolean;
+  extractionMode?: boolean;
 }
 
-export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false }: Props) {
+export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false, extractionMode = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverCol, setHoverCol] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
