@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
-import { importWorkbookFile } from "@/lib/import";
+import { importWorkbookFile, importExtractionFile, normalizeDriverName } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
@@ -11,7 +11,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine } from "lucide-react";
+import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
