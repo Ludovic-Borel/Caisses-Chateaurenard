@@ -1,67 +1,70 @@
+
 ## Objectif
 
-Ajouter un bouton **Extraction** à gauche du bouton **Importer Excel**. Quand on clique dessus, l'application ouvre directement la grille **Recettes** du premier chauffeur de la liste, avec, en plus des colonnes existantes (`704 Esp.` / `704 CB`, `705 Esp.` / `705 CB`, …), une troisième colonne **`Extract`** pour chaque ligne (704, 705, 707, 708, 915, Scolaires).
+Importer le fichier "ventes-realises-orientees-reseau_YYYY-MM-DD…xlsx" et alimenter automatiquement les colonnes **Ext. Esp.** et **Ext. CB** du tableau Recettes, par jour, par chauffeur et par catégorie.
 
-Cette nouvelle colonne `Extract` est créée vide pour le moment ; elle sera alimentée plus tard par l'import d'un fichier dédié (étape suivante, hors de ce plan).
+## Mapping détecté dans le fichier source
 
-## Comportement utilisateur
+Colonnes utilisées :
+- `Date` → jour du mois
+- `Conducteur` → nom du chauffeur
+- `Ligne` → ex. "704 _ Cavaillon - Arles", "915 _ …", "7401 _ …"
+- `Prix TTC` → montant
+- `Annulée` → on exclut les lignes "Oui"
+- `Moyens de paiement` → "Espèce" → Ext. Esp., sinon (CB / Carte bancaire / etc.) → Ext. CB
 
-- Nouveau bouton **Extraction** (icône type "scan / download") placé à gauche de **Importer Excel** dans la barre d'actions.
-- Au clic :
-  - Le mode "extraction" est activé.
-  - Le chauffeur sélectionné devient automatiquement le **premier de la liste triée** (chauffeurs actifs, sinon premier chauffeur historique présent dans le mois).
-  - La grille `RevenueGrid` du chauffeur s'affiche avec, pour chaque catégorie, **3 colonnes** au lieu de 2 : `Esp.`, `CB`, `Extract`.
-- Tant que le mode extraction est actif, la 3ᵉ colonne `Extract` est visible pour **tous** les chauffeurs sur lesquels on navigue (cohérence d'affichage).
-- Le passage au Tableau de bord, Récap global ou Stats désactive automatiquement le mode extraction.
-- Les valeurs `Extract` sont **éditables manuellement** (mêmes règles de saisie rapide que les autres cellules) et **persistées** comme le reste des données du mois — pour pouvoir être écrasées plus tard par l'import.
-- Les colonnes `Extract` ne sont **pas** prises en compte dans les totaux Espèces / CB / Total existants ni dans le récap global, le tableau de bord ou les stats. Un sous-total `Extract` est affiché en bas de chaque colonne `Extract` uniquement.
+Mapping ligne → catégorie :
+- Préfixe `704` → catégorie **704**
+- `705` → **705**
+- `707` → **707**
+- `708` → **708**
+- `915` → **915**
+- `7400`, `7401`, `7402`, `7403`, `7404` → **Scolaires**
+- Toute autre ligne (916, 917, …) est ignorée
 
-## Impacts visuels
+Le code ligne est extrait par regex `^(\d{3,4})` au début du champ `Ligne`. On teste d'abord les 4 chiffres (Scolaires 7400-7404) puis les 3 chiffres.
 
-- En-tête de catégorie passe de `colSpan={2}` à `colSpan={3}` quand le mode extraction est actif.
-- Sous-en-tête : ajout d'une cellule `Extract` à fond neutre (token existant, ex. `bg-muted` ou nouveau token léger), distincte des fonds Espèces / CB.
-- Colonne `Total` du jour et `Total` de la colonne : inchangés (Extract exclu).
-- Le bouton **Extraction** suit le style des autres boutons `outline` de la barre.
+## UI
+
+1. **Nouveau bouton "Importer Extraction"** placé à côté du bouton **Extraction** dans la barre d'actions de `src/pages/Index.tsx`, visible uniquement quand `extractionMode` est actif.
+2. Ouvre un input fichier (`.xlsx`).
+3. Après import :
+   - toast récapitulatif (nb lignes traitées, nb chauffeurs trouvés, chauffeurs non rapprochés listés)
+   - les valeurs apparaissent immédiatement dans les colonnes Ext. Esp. / Ext. CB de tous les chauffeurs.
+
+## Logique d'import (`src/lib/import.ts`)
+
+Nouvelle fonction `importExtractionFile(file: File): Promise<ExtractionImportResult>` :
+
+1. Lire la 1ère feuille avec ExcelJS, détecter les colonnes via la ligne d'en-têtes (par nom).
+2. Détecter le mois/année à partir du nom de fichier (`YYYY-MM-DD`) ou à défaut de la 1ère date.
+3. Pour chaque ligne valide (Annulée ≠ "Oui", Prix TTC > 0, ligne mappée) :
+   - normaliser le nom conducteur (trim, upper, suppression accents/doubles espaces)
+   - clé : `(driverNorm, day, category, paymentType)`
+   - cumuler Prix TTC
+4. Retourner `{ year, month, totals: Map<driverNorm, Record<day, DayEntry>>, unmatchedDrivers: [] }`.
+
+## Application dans `Index.tsx`
+
+`handleExtractionImport(result)` :
+- Vérifier que `result.year/month` = mois courant ; sinon, demander confirmation (toast d'avertissement, bascule possible).
+- Construire un `nameIndex` : pour chaque chauffeur connu (liste fusionnée du mois), mapper son nom normalisé → nom canonique.
+- Pour chaque chauffeur du fichier :
+  - si trouvé : remplacer (`extracts[day][cat_paymentType] = montant`) sur le `DriverMonthData` correspondant
+  - sinon : ajouter à `unmatched`
+- Sauvegarder via `saveMonthData` et mettre à jour `monthData` dans le state.
+- Toast : "X chauffeurs mis à jour, Y non rapprochés : …".
 
 ## Détails techniques
 
-### Modèle de données
+- `Moyens de paiement` valeurs observées : "Espèce". On mappe :
+  - `/esp[èe]ce/i` → `especes`
+  - sinon → `cb`
+- Les valeurs précédentes des colonnes Extract du mois sont **écrasées** par l'import (remplacement complet, pas cumul) pour permettre des ré-imports propres.
+- Aucun changement de schéma : `extracts?: Record<number, DayEntry>` existe déjà sur `DriverMonthData`.
+- Aucune modification des totaux ou de l'export Excel (les colonnes Extract restent hors totaux comme convenu).
 
-Étendre `DriverMonthData` dans `src/lib/types.ts` :
+## Fichiers modifiés
 
-```ts
-export interface DriverMonthData {
-  days: Record<number, DayEntry>;
-  notReturned?: Record<string, boolean>;
-  extracts?: Record<number, Partial<Record<Category, number>>>; // jour -> catégorie -> montant
-}
-```
-
-Pas de modification de `PAYMENT_TYPES` (pour ne pas casser Recap / Stats / Dashboard / export Excel).
-
-### Composants
-
-- **`src/pages/Index.tsx`**
-  - Nouvel état `extractionMode: boolean`.
-  - Nouveau bouton `Extraction` (icône `lucide-react`, ex. `ScanLine` ou `FileSearch`) à gauche du bouton `Importer Excel`.
-  - Handler : active `extractionMode`, sélectionne le premier chauffeur de `Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()[0]`. Toast d'info si aucun chauffeur.
-  - Désactiver `extractionMode` quand on choisit Tableau de bord, Récap global ou Stats.
-  - Passer `extractionMode` en prop à `RevenueGrid` (et seulement à lui).
-
-- **`src/components/RevenueGrid.tsx`**
-  - Nouvelle prop optionnelle `extractionMode?: boolean`.
-  - Quand `true` :
-    - Headers de catégorie en `colSpan={3}`.
-    - Ajouter une 3ᵉ sous-cellule `Extract` après `CB`.
-    - Pour chaque jour, ajouter une `<td>` éditable liée à `data.extracts?.[day]?.[cat]`.
-    - Helpers : `getExtract(day, cat)`, `setExtract(day, cat, value)` — `setExtract` met à jour `data.extracts` via `onChange`.
-    - Sous-total par colonne `Extract` dans le `tfoot` ; `colSpan` du Total existant ajusté en conséquence.
-    - Les colonnes `Extract` n'entrent **pas** dans `getDayTotal`, `getColumnTotal`, `getGrandTotal`, `getTotalEspeces`, `getTotalCB`.
-
-### Persistance
-
-Aucune migration nécessaire : le champ `extracts` est optionnel et JSON, déjà compatible avec la table `month_data` (jsonb) et le `localStorage` dynamique par mois.
-
-### Hors périmètre (étape suivante)
-
-- L'import du fichier qui alimentera la colonne `Extract` n'est pas implémenté ici. Un emplacement clair sera prévu dans `src/lib/import.ts` lors de la prochaine itération.
+- `src/lib/import.ts` — ajout de `importExtractionFile` + types
+- `src/pages/Index.tsx` — bouton "Importer Extraction", input file caché, handler de fusion
