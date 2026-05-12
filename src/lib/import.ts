@@ -320,3 +320,38 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     rowCount,
   };
 }
+
+const COMPOUND_PREFIXES = new Set(["EL", "LE", "LA", "DE", "DU", "DA", "DI", "DEL", "VAN", "VON"]);
+
+export interface ParsedDriverName {
+  lastName: string;
+  initial: string | null;
+}
+
+// Parse an app driver entry: "PREAUX A" -> {last:"PREAUX", initial:"A"}
+// "EL BADRI" -> {last:"EL BADRI", initial:null}
+// "ABBADI" -> {last:"ABBADI", initial:null}
+export function parseAppDriverName(raw: string): ParsedDriverName {
+  const norm = normalizeDriverName(raw);
+  const tokens = norm.split(" ").filter(Boolean);
+  if (tokens.length === 0) return { lastName: "", initial: null };
+  if (tokens.length >= 2 && tokens[tokens.length - 1].length === 1) {
+    return { lastName: tokens.slice(0, -1).join(" "), initial: tokens[tokens.length - 1] };
+  }
+  return { lastName: tokens.join(" "), initial: null };
+}
+
+// Parse a file driver entry: "Anthony PREAUX" -> {last:"PREAUX", initial:"A"}
+// "Kamel HAJJI" -> {last:"HAJJI", initial:"K"}
+// composed: handle "Foo EL BADRI" -> {last:"EL BADRI", initial:"F"}
+export function parseFileDriverName(raw: string): ParsedDriverName {
+  const norm = normalizeDriverName(raw);
+  const tokens = norm.split(" ").filter(Boolean);
+  if (tokens.length === 0) return { lastName: "", initial: null };
+  if (tokens.length === 1) return { lastName: tokens[0], initial: null };
+  let lastCount = 1;
+  if (tokens.length >= 3 && COMPOUND_PREFIXES.has(tokens[tokens.length - 2])) lastCount = 2;
+  const lastName = tokens.slice(tokens.length - lastCount).join(" ");
+  const first = tokens[0];
+  return { lastName, initial: first ? first[0] : null };
+}
