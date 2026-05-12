@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
-import { importWorkbookFile, importExtractionFile, normalizeDriverName } from "@/lib/import";
+import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
@@ -175,20 +175,38 @@ export default function Index() {
         return;
       }
 
-      // Build name index from known drivers + drivers in current month
+      // Build last-name index from known drivers + drivers in current month
       const knownNames = Array.from(new Set([...driversRef.current, ...Object.keys(dataRef.current.drivers || {})]));
-      const nameIndex = new Map<string, string>();
-      for (const n of knownNames) nameIndex.set(normalizeDriverName(n), n);
+      const lastNameIndex = new Map<string, { canonical: string; initial: string | null }[]>();
+      for (const n of knownNames) {
+        const p = parseAppDriverName(n);
+        if (!p.lastName) continue;
+        const arr = lastNameIndex.get(p.lastName) || [];
+        arr.push({ canonical: n, initial: p.initial });
+        lastNameIndex.set(p.lastName, arr);
+      }
 
       const matched: string[] = [];
       const unmatched: string[] = [];
 
       setData((prev) => {
         const newDrivers = { ...prev.drivers };
-        for (const [norm, dayMap] of Object.entries(result.byDriver)) {
-          const canonical = nameIndex.get(norm);
+        for (const [normFull, dayMap] of Object.entries(result.byDriver)) {
+          const parsed = parseFileDriverName(normFull);
+          const candidates = lastNameIndex.get(parsed.lastName);
+          let canonical: string | null = null;
+          if (candidates && candidates.length === 1) {
+            canonical = candidates[0].canonical;
+          } else if (candidates && candidates.length > 1) {
+            const exact = candidates.find((c) => c.initial && parsed.initial && c.initial === parsed.initial);
+            if (exact) canonical = exact.canonical;
+            else {
+              const noInit = candidates.find((c) => !c.initial);
+              if (noInit) canonical = noInit.canonical;
+            }
+          }
           if (!canonical) {
-            unmatched.push(norm);
+            unmatched.push(normFull);
             continue;
           }
           matched.push(canonical);
