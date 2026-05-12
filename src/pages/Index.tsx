@@ -312,6 +312,20 @@ export default function Index() {
           >
             <ScanLine className="h-4 w-4 mr-2" /> Extraction
           </Button>
+          {extractionMode && (
+            <>
+              <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
+                <FileDown className="h-4 w-4 mr-2" /> Importer Extraction
+              </Button>
+              <input
+                ref={extractionFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => handleExtractionImport(e.target.files)}
+              />
+            </>
+          )}
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
