@@ -203,3 +203,120 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
 
   return { data: monthData, driversFound: allDrivers, fileName: file.name };
 }
+
+// =====================================================================
+// Extraction import: ventes-realises-orientees-reseau_*.xlsx
+// Reads daily sales per driver/line/payment and produces extracts data.
+// =====================================================================
+
+export interface ExtractionImportResult {
+  year: number;
+  month: number;
+  byDriver: Record<string, Record<number, Record<string, number>>>; // driverNorm -> day -> "cat_pay" -> total
+  driversFound: string[]; // normalized names found
+  rowCount: number;
+}
+
+export function normalizeDriverName(name: string): string {
+  return String(name || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function lineToCategory(ligne: unknown): Category | null {
+  if (ligne == null) return null;
+  const s = String(ligne).trim();
+  // Try 4-digit first (Scolaires 7400-7404)
+  const m4 = s.match(/^(\d{4})/);
+  if (m4) {
+    const code = m4[1];
+    if (["7400", "7401", "7402", "7403", "7404"].includes(code)) return "Scolaires";
+  }
+  const m3 = s.match(/^(\d{3})/);
+  if (m3) {
+    const code = m3[1];
+    if (["704", "705", "707", "708", "915"].includes(code)) return code as Category;
+  }
+  return null;
+}
+
+function paymentToType(p: unknown): "especes" | "cb" {
+  const s = String(p || "").toLowerCase();
+  if (/esp[èe]ce/.test(s)) return "especes";
+  return "cb";
+}
+
+function parseExtractionMonthYear(fileName: string): { year: number; month: number } | null {
+  const m = fileName.match(/(\d{4})-(\d{2})-\d{2}/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10) - 1;
+    if (mo >= 0 && mo <= 11) return { year: y, month: mo };
+  }
+  return null;
+}
+
+export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const sheetName = wb.SheetNames[0];
+  if (!sheetName) throw new Error("Fichier vide");
+  const sheet = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
+  if (rows.length === 0) throw new Error("Aucune ligne dans le fichier");
+
+  // Detect month/year from filename, fallback to first row date
+  let my = parseExtractionMonthYear(file.name);
+  if (!my) {
+    const firstDate = rows[0]?.["Date"];
+    if (firstDate instanceof Date) my = { year: firstDate.getFullYear(), month: firstDate.getMonth() };
+  }
+  if (!my) throw new Error("Impossible de déterminer le mois/année");
+
+  const byDriver: Record<string, Record<number, Record<string, number>>> = {};
+  let rowCount = 0;
+
+  for (const row of rows) {
+    if (String(row["Annulée"] || "").toLowerCase() === "oui") continue;
+    const cat = lineToCategory(row["Ligne"]);
+    if (!cat) continue;
+    const prix = Number(row["Prix TTC"]);
+    if (!prix || isNaN(prix)) continue;
+    const conducteur = row["Conducteur"];
+    const driverNorm = normalizeDriverName(String(conducteur || ""));
+    if (!driverNorm) continue;
+    const dateVal = row["Date"];
+    let day: number | null = null;
+    if (dateVal instanceof Date) day = dateVal.getDate();
+    else if (typeof dateVal === "string") {
+      const d = new Date(dateVal);
+      if (!isNaN(d.getTime())) day = d.getDate();
+    }
+    if (!day) continue;
+    const pay = paymentToType(row["Moyens de paiement"]);
+    const key = getCellKey(cat, pay);
+    if (!byDriver[driverNorm]) byDriver[driverNorm] = {};
+    if (!byDriver[driverNorm][day]) byDriver[driverNorm][day] = {};
+    byDriver[driverNorm][day][key] = (byDriver[driverNorm][day][key] || 0) + prix;
+    rowCount++;
+  }
+
+  // Round to 2 decimals
+  for (const dn of Object.keys(byDriver)) {
+    for (const day of Object.keys(byDriver[dn])) {
+      const e = byDriver[dn][Number(day)];
+      for (const k of Object.keys(e)) e[k] = Math.round(e[k] * 100) / 100;
+    }
+  }
+
+  return {
+    year: my.year,
+    month: my.month,
+    byDriver,
+    driversFound: Object.keys(byDriver),
+    rowCount,
+  };
+}
