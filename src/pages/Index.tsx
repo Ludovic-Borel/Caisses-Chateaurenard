@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
-import { importWorkbookFile } from "@/lib/import";
+import { importWorkbookFile, importExtractionFile, normalizeDriverName } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
@@ -11,7 +11,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import { Button } from "@/components/ui/button";
-import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine } from "lucide-react";
+import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -158,6 +158,58 @@ export default function Index() {
   }, [data, drivers]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const extractionFileRef = useRef<HTMLInputElement>(null);
+
+  const handleExtractionImport = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setLoading(true);
+    try {
+      const result = await importExtractionFile(file);
+      if (result.year !== dataRef.current.year || result.month !== dataRef.current.month) {
+        toast.error(
+          `Le fichier concerne ${MONTH_NAMES[result.month]} ${result.year}, mois courant : ${MONTH_NAMES[dataRef.current.month]} ${dataRef.current.year}`
+        );
+        setLoading(false);
+        if (extractionFileRef.current) extractionFileRef.current.value = "";
+        return;
+      }
+
+      // Build name index from known drivers + drivers in current month
+      const knownNames = Array.from(new Set([...driversRef.current, ...Object.keys(dataRef.current.drivers || {})]));
+      const nameIndex = new Map<string, string>();
+      for (const n of knownNames) nameIndex.set(normalizeDriverName(n), n);
+
+      const matched: string[] = [];
+      const unmatched: string[] = [];
+
+      setData((prev) => {
+        const newDrivers = { ...prev.drivers };
+        for (const [norm, dayMap] of Object.entries(result.byDriver)) {
+          const canonical = nameIndex.get(norm);
+          if (!canonical) {
+            unmatched.push(norm);
+            continue;
+          }
+          matched.push(canonical);
+          const existing = newDrivers[canonical] || { days: {} };
+          newDrivers[canonical] = { ...existing, extracts: dayMap };
+        }
+        return { ...prev, drivers: newDrivers };
+      });
+
+      toast.success(
+        `Extraction importée : ${matched.length} chauffeur(s) mis à jour (${result.rowCount} ventes)` +
+          (unmatched.length > 0 ? ` — non rapprochés : ${unmatched.join(", ")}` : "")
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(`Import extraction : ${msg}`);
+    } finally {
+      setLoading(false);
+      if (extractionFileRef.current) extractionFileRef.current.value = "";
+    }
+  }, []);
 
   const handleImportFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -260,6 +312,20 @@ export default function Index() {
           >
             <ScanLine className="h-4 w-4 mr-2" /> Extraction
           </Button>
+          {extractionMode && (
+            <>
+              <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
+                <FileDown className="h-4 w-4 mr-2" /> Importer Extraction
+              </Button>
+              <input
+                ref={extractionFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => handleExtractionImport(e.target.files)}
+              />
+            </>
+          )}
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
