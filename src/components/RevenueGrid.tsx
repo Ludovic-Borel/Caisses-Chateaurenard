@@ -242,23 +242,27 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                   })}
                   {extractionMode && PAYMENT_TYPES.map((pt) => {
                     const xVal = getExtract(day, cat, pt);
+                    const entered = getValue(day, cat, pt);
+                    const mismatch = xVal > 0 && entered > 0 && Math.abs(xVal - entered) > 0.01;
                     const xKey = `${cat}_extract_${pt}`;
                     const isHl = hoverDay === day || hoverCol === xKey;
                     const editKey = `${day}-${cat}-extract-${pt}`;
+                    const baseBg = mismatch ? "bg-grid-mismatch" : "bg-grid-extract";
                     return (
                       <td
                         key={`${day}-${cat}-x-${pt}`}
-                        className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
+                        className={`border border-border px-0 py-0 transition-colors duration-150 ${baseBg}`}
                         style={isHl ? { backgroundColor: hlBg } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
+                        title={mismatch ? `Écart avec saisie : ${fmt(entered)} vs ${fmt(xVal)}` : undefined}
                       >
                         {readOnly ? (
-                          <span className="block px-1 py-0.5 text-right w-full">{xVal ? fmt(xVal) : ""}</span>
+                          <span className={`block px-1 py-0.5 text-right w-full ${mismatch ? "text-destructive font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
                         ) : (
                           <input
                             type="text"
                             inputMode="decimal"
-                            className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs"
+                            className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch ? "text-destructive font-bold" : ""}`}
                             value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
                             onFocus={() => {
                               setHoverDay(day); setHoverCol(xKey);
