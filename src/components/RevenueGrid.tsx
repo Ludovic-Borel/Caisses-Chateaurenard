@@ -175,7 +175,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 className="border border-border px-2 py-0.5 font-medium transition-colors duration-150"
                 style={hoverDay === day ? { backgroundColor: hlBg, fontWeight: 700, color: "hsl(var(--primary))" } : { color: "hsl(var(--muted-foreground))" }}
               >
-                {day}
+                {fmtDate(year, month, day)}
               </td>
               {CATEGORIES.map((cat) => (
                 <>
