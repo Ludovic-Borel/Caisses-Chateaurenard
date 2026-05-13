@@ -201,7 +201,7 @@ export default function RecapGrid({ data, drivers }: Props) {
         <table className="w-full text-xs border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-grid-header text-grid-header-foreground">
-              <th rowSpan={2} className="border border-border px-3 py-1.5 text-left align-middle">Jour</th>
+              <th rowSpan={2} className="border border-border px-3 py-1.5 text-left align-middle">Date</th>
               {CATEGORIES.map((cat) => (
                 <th key={`d-h-${cat}`} colSpan={2} className="border border-border px-2 py-1.5 text-center">
                   {cat}
@@ -223,7 +223,7 @@ export default function RecapGrid({ data, drivers }: Props) {
           <tbody>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
               <tr key={`day-${d}`} className="hover:bg-muted/50 transition-colors">
-                <td className="border border-border px-3 py-1 font-medium text-foreground text-center">{d}</td>
+                <td className="border border-border px-3 py-1 font-medium text-foreground text-center">{`${String(d).padStart(2,"0")}-${String(data.month+1).padStart(2,"0")}-${data.year}`}</td>
                 {CATEGORIES.map((cat) => (
                   <>
                     <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">

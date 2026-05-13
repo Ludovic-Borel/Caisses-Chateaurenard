@@ -4,13 +4,18 @@ import { CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, DriverMonthData,
 interface Props {
   data: DriverMonthData;
   daysInMonth: number;
+  year: number;
+  month: number; // 0-11
   title?: string;
   onChange?: (data: DriverMonthData) => void;
   readOnly?: boolean;
   extractionMode?: boolean;
 }
 
-export default function RevenueGrid({ data, daysInMonth, title, onChange, readOnly = false, extractionMode = false }: Props) {
+const fmtDate = (year: number, month: number, day: number) =>
+  `${String(day).padStart(2, "0")}-${String(month + 1).padStart(2, "0")}-${year}`;
+
+export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverCol, setHoverCol] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -110,7 +115,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
-            <th className="border border-border px-2 py-1.5 text-left w-16">Jour</th>
+            <th className="border border-border px-2 py-1.5 text-left w-24">Date</th>
             {CATEGORIES.map((cat) => (
               <th
                 key={cat}
@@ -170,7 +175,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 className="border border-border px-2 py-0.5 font-medium transition-colors duration-150"
                 style={hoverDay === day ? { backgroundColor: hlBg, fontWeight: 700, color: "hsl(var(--primary))" } : { color: "hsl(var(--muted-foreground))" }}
               >
-                {day}
+                {fmtDate(year, month, day)}
               </td>
               {CATEGORIES.map((cat) => (
                 <>
