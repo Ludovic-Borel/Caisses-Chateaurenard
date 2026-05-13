@@ -201,7 +201,7 @@ export default function RecapGrid({ data, drivers }: Props) {
         <table className="w-full text-xs border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-grid-header text-grid-header-foreground">
-              <th rowSpan={2} className="border border-border px-3 py-1.5 text-left align-middle">Jour</th>
+              <th rowSpan={2} className="border border-border px-3 py-1.5 text-left align-middle">Date</th>
               {CATEGORIES.map((cat) => (
                 <th key={`d-h-${cat}`} colSpan={2} className="border border-border px-2 py-1.5 text-center">
                   {cat}
