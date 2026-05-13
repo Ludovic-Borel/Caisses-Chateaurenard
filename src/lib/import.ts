@@ -263,9 +263,9 @@ function parseExtractionMonthYear(fileName: string): { year: number; month: numb
 function parseRowDate(v: unknown): { y: number; m: number; d: number } | null {
   if (v == null || v === "") return null;
   if (v instanceof Date) {
-    // xlsx with cellDates returns dates in local TZ that represent the *displayed* date
-    // but for safety use UTC components (xlsx anchors them at UTC midnight).
-    return { y: v.getUTCFullYear(), m: v.getUTCMonth(), d: v.getUTCDate() };
+    // Excel dates are displayed as local calendar dates. Using UTC here can shift
+    // a midnight date to the previous day in French time zones.
+    return { y: v.getFullYear(), m: v.getMonth(), d: v.getDate() };
   }
   if (typeof v === "number") {
     const parsed: any = (XLSX as any).SSF?.parse_date_code?.(v);
@@ -290,10 +290,11 @@ function parseRowDate(v: unknown): { y: number; m: number; d: number } | null {
 export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
-  const sheetName = wb.SheetNames[0];
-  if (!sheetName) throw new Error("Fichier vide");
-  const sheet = wb.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
+  if (wb.SheetNames.length === 0) throw new Error("Fichier vide");
+  const rows = wb.SheetNames.flatMap((sheetName) => {
+    const sheet = wb.Sheets[sheetName];
+    return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
+  });
   if (rows.length === 0) throw new Error("Aucune ligne dans le fichier");
 
   // Detect month/year from filename, fallback to first row date
