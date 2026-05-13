@@ -315,7 +315,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 {extractionMode && PAYMENT_TYPES.map((pt) => (
                   <td
                     key={`t-${cat}-x-${pt}`}
-                    className="border border-border px-2 py-1.5 text-right bg-muted/40"
+                    className="border border-border px-2 py-1.5 text-right bg-grid-extract"
                     style={hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}
