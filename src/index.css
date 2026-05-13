@@ -44,6 +44,8 @@ All colors MUST be HSL.
     --grid-especes: 35 90% 96%;
     --grid-cb: 187 60% 93%;
     --grid-highlight: 50 100% 85%;
+    --grid-extract: 32 100% 88%;
+    --grid-mismatch: 0 85% 88%;
 
     --sidebar-background: 210 30% 97%;
     --sidebar-foreground: 230 40% 20%;
