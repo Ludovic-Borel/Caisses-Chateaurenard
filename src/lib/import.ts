@@ -263,8 +263,13 @@ function parseExtractionMonthYear(fileName: string): { year: number; month: numb
 function parseRowDate(v: unknown): { y: number; m: number; d: number } | null {
   if (v == null || v === "") return null;
   if (v instanceof Date) {
-    // Excel dates are displayed as local calendar dates. Using UTC here can shift
-    // a midnight date to the previous day in French time zones.
+    // XLSX may build dates as UTC midnight or local midnight depending on settings.
+    // If the time is midnight in UTC, treat the calendar date as UTC components to
+    // avoid shifting one day backward in negative-offset zones; otherwise use local.
+    const isUtcMidnight = v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0;
+    if (isUtcMidnight) {
+      return { y: v.getUTCFullYear(), m: v.getUTCMonth(), d: v.getUTCDate() };
+    }
     return { y: v.getFullYear(), m: v.getMonth(), d: v.getDate() };
   }
   if (typeof v === "number") {
