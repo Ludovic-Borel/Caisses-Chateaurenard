@@ -144,14 +144,14 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                   <>
                     <th
                       key={`${cat}-xe`}
-                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      className="border border-border px-1 py-1 text-center bg-grid-extract text-foreground font-medium transition-colors duration-150"
                       style={hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. Esp.
                     </th>
                     <th
                       key={`${cat}-xc`}
-                      className="border border-border px-1 py-1 text-center bg-muted text-foreground font-medium transition-colors duration-150"
+                      className="border border-border px-1 py-1 text-center bg-grid-extract text-foreground font-medium transition-colors duration-150"
                       style={hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. CB
@@ -242,23 +242,27 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                   })}
                   {extractionMode && PAYMENT_TYPES.map((pt) => {
                     const xVal = getExtract(day, cat, pt);
+                    const entered = getValue(day, cat, pt);
+                    const mismatch = xVal > 0 && entered > 0 && Math.abs(xVal - entered) > 0.01;
                     const xKey = `${cat}_extract_${pt}`;
                     const isHl = hoverDay === day || hoverCol === xKey;
                     const editKey = `${day}-${cat}-extract-${pt}`;
+                    const baseBg = mismatch ? "bg-grid-mismatch" : "bg-grid-extract";
                     return (
                       <td
                         key={`${day}-${cat}-x-${pt}`}
-                        className="border border-border px-0 py-0 transition-colors duration-150 bg-muted/40"
+                        className={`border border-border px-0 py-0 transition-colors duration-150 ${baseBg}`}
                         style={isHl ? { backgroundColor: hlBg } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
+                        title={mismatch ? `Écart avec saisie : ${fmt(entered)} vs ${fmt(xVal)}` : undefined}
                       >
                         {readOnly ? (
-                          <span className="block px-1 py-0.5 text-right w-full">{xVal ? fmt(xVal) : ""}</span>
+                          <span className={`block px-1 py-0.5 text-right w-full ${mismatch ? "text-destructive font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
                         ) : (
                           <input
                             type="text"
                             inputMode="decimal"
-                            className="w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs"
+                            className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch ? "text-destructive font-bold" : ""}`}
                             value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
                             onFocus={() => {
                               setHoverDay(day); setHoverCol(xKey);
@@ -311,7 +315,7 @@ export default function RevenueGrid({ data, daysInMonth, title, onChange, readOn
                 {extractionMode && PAYMENT_TYPES.map((pt) => (
                   <td
                     key={`t-${cat}-x-${pt}`}
-                    className="border border-border px-2 py-1.5 text-right bg-muted/40"
+                    className="border border-border px-2 py-1.5 text-right bg-grid-extract"
                     style={hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}

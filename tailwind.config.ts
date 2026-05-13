@@ -45,6 +45,8 @@ export default {
           total: "hsl(var(--grid-total))",
           especes: "hsl(var(--grid-especes))",
           cb: "hsl(var(--grid-cb))",
+          extract: "hsl(var(--grid-extract))",
+          mismatch: "hsl(var(--grid-mismatch))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

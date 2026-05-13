@@ -259,6 +259,34 @@ function parseExtractionMonthYear(fileName: string): { year: number; month: numb
   return null;
 }
 
+// Robust date extraction returning {y,m,d} (m 0-indexed) — avoids timezone shift.
+function parseRowDate(v: unknown): { y: number; m: number; d: number } | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) {
+    // xlsx with cellDates returns dates in local TZ that represent the *displayed* date
+    // but for safety use UTC components (xlsx anchors them at UTC midnight).
+    return { y: v.getUTCFullYear(), m: v.getUTCMonth(), d: v.getUTCDate() };
+  }
+  if (typeof v === "number") {
+    const parsed: any = (XLSX as any).SSF?.parse_date_code?.(v);
+    if (parsed && parsed.y) return { y: parsed.y, m: parsed.m - 1, d: parsed.d };
+  }
+  if (typeof v === "string") {
+    const s = v.trim();
+    // DD/MM/YYYY or DD-MM-YYYY
+    const fr = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (fr) {
+      let y = parseInt(fr[3], 10);
+      if (y < 100) y += 2000;
+      return { y, m: parseInt(fr[2], 10) - 1, d: parseInt(fr[1], 10) };
+    }
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return { y: parseInt(iso[1], 10), m: parseInt(iso[2], 10) - 1, d: parseInt(iso[3], 10) };
+  }
+  return null;
+}
+
 export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
@@ -271,13 +299,16 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   // Detect month/year from filename, fallback to first row date
   let my = parseExtractionMonthYear(file.name);
   if (!my) {
-    const firstDate = rows[0]?.["Date"];
-    if (firstDate instanceof Date) my = { year: firstDate.getFullYear(), month: firstDate.getMonth() };
+    for (const r of rows) {
+      const pd = parseRowDate(r["Date"]);
+      if (pd) { my = { year: pd.y, month: pd.m }; break; }
+    }
   }
   if (!my) throw new Error("Impossible de déterminer le mois/année");
 
   const byDriver: Record<string, Record<number, Record<string, number>>> = {};
   let rowCount = 0;
+  let skippedOutOfMonth = 0;
 
   for (const row of rows) {
     if (String(row["Annulée"] || "").toLowerCase() === "oui") continue;
@@ -288,14 +319,12 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     const conducteur = row["Conducteur"];
     const driverNorm = normalizeDriverName(String(conducteur || ""));
     if (!driverNorm) continue;
-    const dateVal = row["Date"];
-    let day: number | null = null;
-    if (dateVal instanceof Date) day = dateVal.getDate();
-    else if (typeof dateVal === "string") {
-      const d = new Date(dateVal);
-      if (!isNaN(d.getTime())) day = d.getDate();
-    }
-    if (!day) continue;
+    const pd = parseRowDate(row["Date"]);
+    if (!pd) continue;
+    // Only keep rows belonging to the imported month/year
+    if (pd.y !== my.year || pd.m !== my.month) { skippedOutOfMonth++; continue; }
+    const day = pd.d;
+    if (!day || day < 1 || day > 31) continue;
     const pay = paymentToType(row["Moyens de paiement"]);
     const key = getCellKey(cat, pay);
     if (!byDriver[driverNorm]) byDriver[driverNorm] = {};
