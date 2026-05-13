@@ -397,6 +397,8 @@ export default function Index() {
                     title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
                     data={data.drivers[selectedDriver] || { days: {} }}
                     daysInMonth={daysInMonth}
+                    year={data.year}
+                    month={data.month}
                     onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)}
                     extractionMode={extractionMode}
                   />
