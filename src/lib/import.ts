@@ -209,12 +209,32 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
 // Reads daily sales per driver/line/payment and produces extracts data.
 // =====================================================================
 
+export type SkipReason =
+  | "annulee"
+  | "ligne_inconnue"
+  | "prix_invalide"
+  | "conducteur_vide"
+  | "date_invalide"
+  | "hors_mois";
+
+export interface SkippedRow {
+  reason: SkipReason;
+  sheet: string;
+  row: number; // 1-based row index in the sheet
+  date: string;
+  conducteur: string;
+  ligne: string;
+  prix: string;
+}
+
 export interface ExtractionImportResult {
   year: number;
   month: number;
   byDriver: Record<string, Record<number, Record<string, number>>>; // driverNorm -> day -> "cat_pay" -> total
   driversFound: string[]; // normalized names found
   rowCount: number;
+  skipped: SkippedRow[];
+  totalRows: number;
 }
 
 export function normalizeDriverName(name: string): string {
