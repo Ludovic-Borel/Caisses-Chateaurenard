@@ -25,6 +25,13 @@ export default function Index() {
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
   const [extractionMode, setExtractionMode] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    matched: number;
+    rowCount: number;
+    totalRows: number;
+    skipped: SkippedRow[];
+    unmatched: { name: string; days: number; total: number }[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
