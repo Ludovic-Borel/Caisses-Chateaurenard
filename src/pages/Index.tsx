@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
 import { saveWithFilePicker } from "@/lib/export";
-import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName } from "@/lib/import";
+import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
 import { supabase } from "@/integrations/supabase/client";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
@@ -10,6 +10,7 @@ import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
+import ImportReportDialog from "@/components/ImportReportDialog";
 import { Button } from "@/components/ui/button";
 import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown } from "lucide-react";
 import { toast } from "sonner";
@@ -25,6 +26,13 @@ export default function Index() {
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
   const [extractionMode, setExtractionMode] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    matched: number;
+    rowCount: number;
+    totalRows: number;
+    skipped: SkippedRow[];
+    unmatched: { name: string; days: number; total: number }[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
@@ -187,7 +195,7 @@ export default function Index() {
       }
 
       const matched: string[] = [];
-      const unmatched: string[] = [];
+      const unmatched: { name: string; days: number; total: number }[] = [];
 
       setData((prev) => {
         const newDrivers = { ...prev.drivers };
@@ -206,7 +214,10 @@ export default function Index() {
             }
           }
           if (!canonical) {
-            unmatched.push(normFull);
+            let total = 0;
+            const days = Object.keys(dayMap).length;
+            for (const dd of Object.values(dayMap)) for (const v of Object.values(dd)) total += v;
+            unmatched.push({ name: normFull, days, total: Math.round(total * 100) / 100 });
             continue;
           }
           matched.push(canonical);
@@ -216,9 +227,18 @@ export default function Index() {
         return { ...prev, drivers: newDrivers };
       });
 
+      setImportReport({
+        matched: matched.length,
+        rowCount: result.rowCount,
+        totalRows: result.totalRows,
+        skipped: result.skipped,
+        unmatched,
+      });
+
+      const issuesCount = result.skipped.length + unmatched.length;
       toast.success(
-        `Extraction importée : ${matched.length} chauffeur(s) mis à jour (${result.rowCount} ventes)` +
-          (unmatched.length > 0 ? ` — non rapprochés : ${unmatched.join(", ")}` : "")
+        `Extraction importée : ${matched.length} chauffeur(s) — ${result.rowCount} ventes` +
+          (issuesCount > 0 ? ` — ${issuesCount} ligne(s) non importée(s) (voir rapport)` : "")
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -413,6 +433,8 @@ export default function Index() {
           </div>
         </div>
       </main>
+
+      <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
     </div>
   );
 }

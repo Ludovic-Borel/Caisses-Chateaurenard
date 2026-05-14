@@ -209,12 +209,32 @@ export async function importWorkbookFile(file: File): Promise<ImportResult> {
 // Reads daily sales per driver/line/payment and produces extracts data.
 // =====================================================================
 
+export type SkipReason =
+  | "annulee"
+  | "ligne_inconnue"
+  | "prix_invalide"
+  | "conducteur_vide"
+  | "date_invalide"
+  | "hors_mois";
+
+export interface SkippedRow {
+  reason: SkipReason;
+  sheet: string;
+  row: number; // 1-based row index in the sheet
+  date: string;
+  conducteur: string;
+  ligne: string;
+  prix: string;
+}
+
 export interface ExtractionImportResult {
   year: number;
   month: number;
   byDriver: Record<string, Record<number, Record<string, number>>>; // driverNorm -> day -> "cat_pay" -> total
   driversFound: string[]; // normalized names found
   rowCount: number;
+  skipped: SkippedRow[];
+  totalRows: number;
 }
 
 export function normalizeDriverName(name: string): string {
@@ -304,6 +324,8 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   // Read each sheet as AOA, locate the header row, then map by column index.
   // The extraction file has the date in column 2 (index 1).
   type Row = {
+    sheet: string;
+    rowNum: number;
     date: unknown;
     conducteur: unknown;
     ligne: unknown;
@@ -316,14 +338,13 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
     const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true });
-    // Find header row: first row containing "Conducteur"
     const headerIdx = aoa.findIndex((r) =>
       Array.isArray(r) && r.some((c) => typeof c === "string" && /conducteur/i.test(c))
     );
     if (headerIdx < 0) continue;
     const headers = (aoa[headerIdx] as unknown[]).map((h) => String(h ?? "").toLowerCase());
     const findCol = (re: RegExp) => headers.findIndex((h) => re.test(h));
-    const dateCol = 1; // column 2 per user spec
+    const dateCol = 1;
     const condCol = findCol(/conducteur/);
     const ligneCol = findCol(/ligne/);
     const prixCol = findCol(/prix.*ttc|^ttc|montant/);
@@ -334,7 +355,11 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     for (let i = headerIdx + 1; i < aoa.length; i++) {
       const r = aoa[i];
       if (!Array.isArray(r)) continue;
+      // Skip fully empty rows silently
+      if (r.every((c) => c == null || c === "")) continue;
       rows.push({
+        sheet: sheetName,
+        rowNum: i + 1,
         date: r[dateCol],
         conducteur: r[condCol],
         ligne: r[ligneCol],
@@ -347,7 +372,6 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
 
   if (rows.length === 0) throw new Error("Aucune ligne dans le fichier");
 
-  // Detect month/year from filename, fallback to first row date
   let my = parseExtractionMonthYear(file.name);
   if (!my) {
     for (const r of rows) {
@@ -359,20 +383,36 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
 
   const byDriver: Record<string, Record<number, Record<string, number>>> = {};
   let rowCount = 0;
+  const skipped: SkippedRow[] = [];
+  const fmtDate = (v: unknown) => {
+    if (v instanceof Date) return v.toLocaleDateString("fr-FR");
+    return v == null ? "" : String(v);
+  };
+  const pushSkip = (row: Row, reason: SkipReason) => {
+    skipped.push({
+      reason,
+      sheet: row.sheet,
+      row: row.rowNum,
+      date: fmtDate(row.date),
+      conducteur: String(row.conducteur ?? ""),
+      ligne: String(row.ligne ?? ""),
+      prix: row.prix == null ? "" : String(row.prix),
+    });
+  };
 
   for (const row of rows) {
-    if (String(row.annulee || "").toLowerCase() === "oui") continue;
+    if (String(row.annulee || "").toLowerCase() === "oui") { pushSkip(row, "annulee"); continue; }
     const cat = lineToCategory(row.ligne);
-    if (!cat) continue;
+    if (!cat) { pushSkip(row, "ligne_inconnue"); continue; }
     const prix = Number(row.prix);
-    if (!prix || isNaN(prix)) continue;
+    if (!prix || isNaN(prix)) { pushSkip(row, "prix_invalide"); continue; }
     const driverNorm = normalizeDriverName(String(row.conducteur || ""));
-    if (!driverNorm) continue;
+    if (!driverNorm) { pushSkip(row, "conducteur_vide"); continue; }
     const pd = parseRowDate(row.date);
-    if (!pd) continue;
-    if (pd.y !== my.year || pd.m !== my.month) continue;
+    if (!pd) { pushSkip(row, "date_invalide"); continue; }
+    if (pd.y !== my.year || pd.m !== my.month) { pushSkip(row, "hors_mois"); continue; }
     const day = pd.d;
-    if (!day || day < 1 || day > 31) continue;
+    if (!day || day < 1 || day > 31) { pushSkip(row, "date_invalide"); continue; }
     const pay = paymentToType(row.paiement);
     const key = getCellKey(cat, pay);
     if (!byDriver[driverNorm]) byDriver[driverNorm] = {};
@@ -394,6 +434,8 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     byDriver,
     driversFound: Object.keys(byDriver),
     rowCount,
+    skipped,
+    totalRows: rows.length,
   };
 }
 
