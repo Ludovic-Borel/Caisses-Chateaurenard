@@ -300,17 +300,58 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: true });
   if (wb.SheetNames.length === 0) throw new Error("Fichier vide");
-  const rows = wb.SheetNames.flatMap((sheetName) => {
+
+  // Read each sheet as AOA, locate the header row, then map by column index.
+  // The extraction file has the date in column 2 (index 1).
+  type Row = {
+    date: unknown;
+    conducteur: unknown;
+    ligne: unknown;
+    prix: unknown;
+    paiement: unknown;
+    annulee: unknown;
+  };
+  const rows: Row[] = [];
+
+  for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true });
-  });
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true });
+    // Find header row: first row containing "Conducteur"
+    const headerIdx = aoa.findIndex((r) =>
+      Array.isArray(r) && r.some((c) => typeof c === "string" && /conducteur/i.test(c))
+    );
+    if (headerIdx < 0) continue;
+    const headers = (aoa[headerIdx] as unknown[]).map((h) => String(h ?? "").toLowerCase());
+    const findCol = (re: RegExp) => headers.findIndex((h) => re.test(h));
+    const dateCol = 1; // column 2 per user spec
+    const condCol = findCol(/conducteur/);
+    const ligneCol = findCol(/ligne/);
+    const prixCol = findCol(/prix.*ttc|^ttc|montant/);
+    const payCol = findCol(/paiement|moyen/);
+    const annulCol = findCol(/annul/);
+    if (condCol < 0 || ligneCol < 0 || prixCol < 0) continue;
+
+    for (let i = headerIdx + 1; i < aoa.length; i++) {
+      const r = aoa[i];
+      if (!Array.isArray(r)) continue;
+      rows.push({
+        date: r[dateCol],
+        conducteur: r[condCol],
+        ligne: r[ligneCol],
+        prix: r[prixCol],
+        paiement: payCol >= 0 ? r[payCol] : null,
+        annulee: annulCol >= 0 ? r[annulCol] : null,
+      });
+    }
+  }
+
   if (rows.length === 0) throw new Error("Aucune ligne dans le fichier");
 
   // Detect month/year from filename, fallback to first row date
   let my = parseExtractionMonthYear(file.name);
   if (!my) {
     for (const r of rows) {
-      const pd = parseRowDate(r["Date"]);
+      const pd = parseRowDate(r.date);
       if (pd) { my = { year: pd.y, month: pd.m }; break; }
     }
   }
@@ -318,24 +359,21 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
 
   const byDriver: Record<string, Record<number, Record<string, number>>> = {};
   let rowCount = 0;
-  let skippedOutOfMonth = 0;
 
   for (const row of rows) {
-    if (String(row["Annulée"] || "").toLowerCase() === "oui") continue;
-    const cat = lineToCategory(row["Ligne"]);
+    if (String(row.annulee || "").toLowerCase() === "oui") continue;
+    const cat = lineToCategory(row.ligne);
     if (!cat) continue;
-    const prix = Number(row["Prix TTC"]);
+    const prix = Number(row.prix);
     if (!prix || isNaN(prix)) continue;
-    const conducteur = row["Conducteur"];
-    const driverNorm = normalizeDriverName(String(conducteur || ""));
+    const driverNorm = normalizeDriverName(String(row.conducteur || ""));
     if (!driverNorm) continue;
-    const pd = parseRowDate(row["Date"]);
+    const pd = parseRowDate(row.date);
     if (!pd) continue;
-    // Only keep rows belonging to the imported month/year
-    if (pd.y !== my.year || pd.m !== my.month) { skippedOutOfMonth++; continue; }
+    if (pd.y !== my.year || pd.m !== my.month) continue;
     const day = pd.d;
     if (!day || day < 1 || day > 31) continue;
-    const pay = paymentToType(row["Moyens de paiement"]);
+    const pay = paymentToType(row.paiement);
     const key = getCellKey(cat, pay);
     if (!byDriver[driverNorm]) byDriver[driverNorm] = {};
     if (!byDriver[driverNorm][day]) byDriver[driverNorm][day] = {};
@@ -343,7 +381,6 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     rowCount++;
   }
 
-  // Round to 2 decimals
   for (const dn of Object.keys(byDriver)) {
     for (const day of Object.keys(byDriver[dn])) {
       const e = byDriver[dn][Number(day)];
