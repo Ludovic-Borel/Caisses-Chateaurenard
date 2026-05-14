@@ -432,6 +432,8 @@ export default function Index() {
           </div>
         </div>
       </main>
+
+      <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
     </div>
   );
 }
