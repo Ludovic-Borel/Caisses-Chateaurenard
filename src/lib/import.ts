@@ -221,6 +221,10 @@ export function normalizeDriverName(name: string): string {
   return String(name || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    // strip apostrophes (straight, curly, backtick) and hyphens so
+    // "M'HAYA", "M’HAYA", "JEAN-LUC" align with "MHAYA", "JEANLUC"
+    .replace(/['’‘‛`´]/g, "")
+    .replace(/-/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
