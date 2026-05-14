@@ -10,6 +10,7 @@ import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
+import ImportReportDialog from "@/components/ImportReportDialog";
 import { Button } from "@/components/ui/button";
 import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown } from "lucide-react";
 import { toast } from "sonner";
