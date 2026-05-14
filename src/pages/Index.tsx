@@ -194,7 +194,7 @@ export default function Index() {
       }
 
       const matched: string[] = [];
-      const unmatched: string[] = [];
+      const unmatched: { name: string; days: number; total: number }[] = [];
 
       setData((prev) => {
         const newDrivers = { ...prev.drivers };
@@ -213,7 +213,10 @@ export default function Index() {
             }
           }
           if (!canonical) {
-            unmatched.push(normFull);
+            let total = 0;
+            const days = Object.keys(dayMap).length;
+            for (const dd of Object.values(dayMap)) for (const v of Object.values(dd)) total += v;
+            unmatched.push({ name: normFull, days, total: Math.round(total * 100) / 100 });
             continue;
           }
           matched.push(canonical);
@@ -223,9 +226,18 @@ export default function Index() {
         return { ...prev, drivers: newDrivers };
       });
 
+      setImportReport({
+        matched: matched.length,
+        rowCount: result.rowCount,
+        totalRows: result.totalRows,
+        skipped: result.skipped,
+        unmatched,
+      });
+
+      const issuesCount = result.skipped.length + unmatched.length;
       toast.success(
-        `Extraction importée : ${matched.length} chauffeur(s) mis à jour (${result.rowCount} ventes)` +
-          (unmatched.length > 0 ? ` — non rapprochés : ${unmatched.join(", ")}` : "")
+        `Extraction importée : ${matched.length} chauffeur(s) — ${result.rowCount} ventes` +
+          (issuesCount > 0 ? ` — ${issuesCount} ligne(s) non importée(s) (voir rapport)` : "")
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
