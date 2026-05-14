@@ -13,7 +13,7 @@ interface Props {
 }
 
 const fmtDate = (year: number, month: number, day: number) =>
-  `${String(day).padStart(2, "0")}-${String(month + 1).padStart(2, "0")}-${year}`;
+  `${String(day).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${year}`;
 
 export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
