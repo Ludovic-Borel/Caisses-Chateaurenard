@@ -241,10 +241,11 @@ export function normalizeDriverName(name: string): string {
   return String(name || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    // strip apostrophes (straight, curly, backtick) and hyphens so
-    // "M'HAYA", "M’HAYA", "JEAN-LUC" align with "MHAYA", "JEANLUC"
-    .replace(/['’‘‛`´]/g, "")
-    .replace(/-/g, " ")
+    // Replace any non-letter character (apostrophes ' ’ ‘ ‛ ` ´ ʼ ′,
+    // hyphens, dots, slashes, leading text-format quote, etc.) by a space
+    // so "M'HAYA", "M’HAYA", "Mʼ HAYA", "JEAN-LUC" all align with their
+    // unaccented uppercase letter-only form.
+    .replace(/[^A-Za-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
