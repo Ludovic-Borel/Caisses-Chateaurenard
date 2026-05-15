@@ -250,15 +250,18 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const entered = getValue(day, cat, pt);
                     const missingEntered = xVal > 0 && entered <= 0;
                     const mismatch = xVal > 0 && (missingEntered || Math.abs(xVal - entered) > 0.01);
+                    const match = xVal > 0 && entered > 0 && Math.abs(xVal - entered) <= 0.01;
                     const xKey = `${cat}_extract_${pt}`;
                     const isHl = hoverDay === day || hoverCol === xKey;
                     const editKey = `${day}-${cat}-extract-${pt}`;
-                    const baseBg = mismatch ? "bg-grid-mismatch" : "bg-grid-extract";
+                    const baseBg = mismatch ? "bg-grid-mismatch" : match ? "bg-grid-match" : "bg-grid-extract";
                     const title = missingEntered
                       ? `Extraction présente (${fmt(xVal)}) mais aucune saisie ${pt === "especes" ? "Esp." : "CB"} en face`
                       : mismatch
                         ? `Écart avec saisie : ${fmt(entered)} vs ${fmt(xVal)}`
-                        : undefined;
+                        : match
+                          ? `Montant extraction identique à la saisie : ${fmt(xVal)}`
+                          : undefined;
                     return (
                       <td
                         key={`${day}-${cat}-x-${pt}`}
