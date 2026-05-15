@@ -47,7 +47,7 @@ export default {
           cb: "hsl(var(--grid-cb))",
           extract: "hsl(var(--grid-extract))",
           mismatch: "hsl(var(--grid-mismatch))",
-        },
+          match: "hsl(var(--grid-match))",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
