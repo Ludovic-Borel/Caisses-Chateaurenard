@@ -346,7 +346,7 @@ function parseRowDate(v: unknown, expectedMonth?: number): DateParts | null {
 
 export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const wb = XLSX.read(buf, { type: "array", cellDates: false, cellText: true });
   if (wb.SheetNames.length === 0) throw new Error("Fichier vide");
 
   // Read each sheet as AOA, locate the header row, then map by column index.
@@ -362,6 +362,11 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     annulee: unknown;
   };
   const rows: Row[] = [];
+  const getCellValue = (sheet: XLSX.WorkSheet, rowIdx: number, colIdx: number): DateCellValue => {
+    const ref = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+    const cell = sheet[ref] as XLSX.CellObject | undefined;
+    return { raw: cell?.v ?? null, text: cell?.w ?? null };
+  };
 
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
@@ -388,7 +393,7 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
       rows.push({
         sheet: sheetName,
         rowNum: i + 1,
-        date: r[dateCol],
+        date: getCellValue(sheet, i, dateCol),
         conducteur: r[condCol],
         ligne: r[ligneCol],
         prix: r[prixCol],
@@ -413,7 +418,10 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   let rowCount = 0;
   const skipped: SkippedRow[] = [];
   const fmtDate = (v: unknown) => {
-    if (v instanceof Date) return v.toLocaleDateString("fr-FR");
+    if (typeof v === "object" && v && "raw" in (v as Record<string, unknown>)) {
+      const cell = v as DateCellValue;
+      return cell.text || (cell.raw == null ? "" : String(cell.raw));
+    }
     return v == null ? "" : String(v);
   };
   const pushSkip = (row: Row, reason: SkipReason) => {
@@ -436,7 +444,7 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     if (!prix || isNaN(prix)) { pushSkip(row, "prix_invalide"); continue; }
     const driverNorm = normalizeDriverName(String(row.conducteur || ""));
     if (!driverNorm) { pushSkip(row, "conducteur_vide"); continue; }
-    const pd = parseRowDate(row.date);
+    const pd = parseRowDate(row.date, my.month);
     if (!pd) { pushSkip(row, "date_invalide"); continue; }
     if (pd.y !== my.year || pd.m !== my.month) { pushSkip(row, "hors_mois"); continue; }
     const day = pd.d;
