@@ -286,42 +286,67 @@ function parseExtractionMonthYear(fileName: string): { year: number; month: numb
   return null;
 }
 
+type DateParts = { y: number; m: number; d: number };
+type DateCellValue = { raw: unknown; text: string | null };
+
+function dateParts(y: number, m: number, d: number): DateParts | null {
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+  const dt = new Date(Date.UTC(y, m, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m || dt.getUTCDate() !== d) return null;
+  return { y, m, d };
+}
+
+function parseDateText(s: string, expectedMonth?: number): DateParts | null {
+  const trimmed = s.trim();
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return dateParts(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
+
+  const fr = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (!fr) return null;
+  let y = parseInt(fr[3], 10);
+  if (y < 100) y += 2000;
+  const a = parseInt(fr[1], 10);
+  const b = parseInt(fr[2], 10);
+  const dmy = dateParts(y, b - 1, a);
+  const mdy = dateParts(y, a - 1, b);
+  if (expectedMonth != null) {
+    if (dmy?.m === expectedMonth) return dmy;
+    if (mdy?.m === expectedMonth) return mdy;
+  }
+  return dmy || mdy;
+}
+
 // Robust date extraction returning {y,m,d} (m 0-indexed) — avoids timezone shift.
-function parseRowDate(v: unknown): { y: number; m: number; d: number } | null {
+function parseRowDate(v: unknown, expectedMonth?: number): DateParts | null {
   if (v == null || v === "") return null;
+  if (typeof v === "object" && "raw" in (v as Record<string, unknown>)) {
+    const cell = v as DateCellValue;
+    const fromText = cell.text ? parseDateText(cell.text, expectedMonth) : null;
+    return fromText || parseRowDate(cell.raw, expectedMonth);
+  }
   if (v instanceof Date) {
-    // XLSX may build dates as UTC midnight or local midnight depending on settings.
-    // If the time is midnight in UTC, treat the calendar date as UTC components to
-    // avoid shifting one day backward in negative-offset zones; otherwise use local.
-    const isUtcMidnight = v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0;
-    if (isUtcMidnight) {
-      return { y: v.getUTCFullYear(), m: v.getUTCMonth(), d: v.getUTCDate() };
+    const local = dateParts(v.getFullYear(), v.getMonth(), v.getDate());
+    const utc = dateParts(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+    if (expectedMonth != null) {
+      if (local?.m === expectedMonth) return local;
+      if (utc?.m === expectedMonth) return utc;
     }
-    return { y: v.getFullYear(), m: v.getMonth(), d: v.getDate() };
+    const isUtcMidnight = v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0;
+    return isUtcMidnight ? utc : local;
   }
   if (typeof v === "number") {
     const parsed: any = (XLSX as any).SSF?.parse_date_code?.(v);
-    if (parsed && parsed.y) return { y: parsed.y, m: parsed.m - 1, d: parsed.d };
+    if (parsed && parsed.y) return dateParts(parsed.y, parsed.m - 1, parsed.d);
   }
   if (typeof v === "string") {
-    const s = v.trim();
-    // DD/MM/YYYY or DD-MM-YYYY
-    const fr = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
-    if (fr) {
-      let y = parseInt(fr[3], 10);
-      if (y < 100) y += 2000;
-      return { y, m: parseInt(fr[2], 10) - 1, d: parseInt(fr[1], 10) };
-    }
-    // YYYY-MM-DD
-    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (iso) return { y: parseInt(iso[1], 10), m: parseInt(iso[2], 10) - 1, d: parseInt(iso[3], 10) };
+    return parseDateText(v, expectedMonth);
   }
   return null;
 }
 
 export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const wb = XLSX.read(buf, { type: "array", cellDates: false, cellText: true });
   if (wb.SheetNames.length === 0) throw new Error("Fichier vide");
 
   // Read each sheet as AOA, locate the header row, then map by column index.
@@ -337,6 +362,11 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     annulee: unknown;
   };
   const rows: Row[] = [];
+  const getCellValue = (sheet: XLSX.WorkSheet, rowIdx: number, colIdx: number): DateCellValue => {
+    const ref = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+    const cell = sheet[ref] as XLSX.CellObject | undefined;
+    return { raw: cell?.v ?? null, text: cell?.w ?? null };
+  };
 
   for (const sheetName of wb.SheetNames) {
     const sheet = wb.Sheets[sheetName];
@@ -363,7 +393,7 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
       rows.push({
         sheet: sheetName,
         rowNum: i + 1,
-        date: r[dateCol],
+        date: getCellValue(sheet, i, dateCol),
         conducteur: r[condCol],
         ligne: r[ligneCol],
         prix: r[prixCol],
@@ -388,7 +418,10 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
   let rowCount = 0;
   const skipped: SkippedRow[] = [];
   const fmtDate = (v: unknown) => {
-    if (v instanceof Date) return v.toLocaleDateString("fr-FR");
+    if (typeof v === "object" && v && "raw" in (v as Record<string, unknown>)) {
+      const cell = v as DateCellValue;
+      return cell.text || (cell.raw == null ? "" : String(cell.raw));
+    }
     return v == null ? "" : String(v);
   };
   const pushSkip = (row: Row, reason: SkipReason) => {
@@ -411,7 +444,7 @@ export async function importExtractionFile(file: File): Promise<ExtractionImport
     if (!prix || isNaN(prix)) { pushSkip(row, "prix_invalide"); continue; }
     const driverNorm = normalizeDriverName(String(row.conducteur || ""));
     if (!driverNorm) { pushSkip(row, "conducteur_vide"); continue; }
-    const pd = parseRowDate(row.date);
+    const pd = parseRowDate(row.date, my.month);
     if (!pd) { pushSkip(row, "date_invalide"); continue; }
     if (pd.y !== my.year || pd.m !== my.month) { pushSkip(row, "hors_mois"); continue; }
     const day = pd.d;
