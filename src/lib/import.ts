@@ -253,11 +253,12 @@ export function normalizeDriverName(name: string): string {
 function lineToCategory(ligne: unknown): Category | null {
   if (ligne == null) return null;
   const s = String(ligne).trim();
-  // Try 4-digit first (Scolaires 7400-7404)
+  // Try 4-digit first (Scolaires 7400-7404 et 7500-7507)
   const m4 = s.match(/^(\d{4})/);
   if (m4) {
     const code = m4[1];
-    if (["7400", "7401", "7402", "7403", "7404"].includes(code)) return "Scolaires";
+    if (["7400", "7401", "7402", "7403", "7404",
+         "7500", "7501", "7502", "7503", "7504", "7505", "7506", "7507"].includes(code)) return "Scolaires";
   }
   const m3 = s.match(/^(\d{3})/);
   if (m3) {
