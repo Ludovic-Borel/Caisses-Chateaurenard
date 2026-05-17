@@ -105,7 +105,7 @@ export default function RecapGrid({ data, drivers }: Props) {
             <th className="border border-border px-2 py-1.5 text-center">Espèces</th>
             <th className="border border-border px-2 py-1.5 text-center">CB</th>
             <th className="border border-border px-2 py-1.5 text-center">Total</th>
-            <th className="border border-border px-2 py-1.5 text-center text-destructive">Non rendu</th>
+            <th className="border border-border px-2 py-1.5 text-center">Non rendu</th>
           </tr>
           <tr className="bg-secondary text-secondary-foreground">
             <th className="border border-border px-3 py-1"></th>
@@ -128,7 +128,7 @@ export default function RecapGrid({ data, drivers }: Props) {
         <tbody>
           {driverTotals.map((dt) => (
             <tr key={dt.driver} className="hover:bg-muted/50 transition-colors">
-              <td className={`border border-border px-3 py-1 font-medium ${dt.totalNotReturned > 0 ? "bg-destructive/15 text-destructive font-bold" : "text-foreground"}`}>
+              <td className={`border border-border px-3 py-1 font-medium ${dt.totalNotReturned > 0 ? "bg-destructive/15 font-bold" : "text-foreground"}`}>
                 {dt.driver}
               </td>
               {CATEGORIES.map((cat) => (
@@ -150,7 +150,7 @@ export default function RecapGrid({ data, drivers }: Props) {
               <td className="border border-border px-2 py-1 font-bold bg-grid-total text-center">
                 {fmt(dt.total)}
               </td>
-              <td className={`border border-border px-2 py-1 text-center font-bold ${dt.totalNotReturned > 0 ? "text-destructive" : ""}`}>
+              <td className={`border border-border px-2 py-1 text-center font-bold ${dt.totalNotReturned > 0 ? "" : ""}`}>
                 {dt.totalNotReturned > 0 ? fmt(dt.totalNotReturned) : "—"}
               </td>
             </tr>
@@ -172,7 +172,7 @@ export default function RecapGrid({ data, drivers }: Props) {
             <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.especes)}</td>
             <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.cb)}</td>
             <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.total)}</td>
-            <td className={`border border-border px-2 py-1 text-center font-bold ${grandTotals.notReturned > 0 ? "text-destructive" : ""}`}>
+            <td className={`border border-border px-2 py-1 text-center font-bold ${grandTotals.notReturned > 0 ? "" : ""}`}>
               {grandTotals.notReturned > 0 ? fmt(grandTotals.notReturned) : "—"}
             </td>
           </tr>

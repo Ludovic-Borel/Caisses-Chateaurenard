@@ -48,6 +48,7 @@ export default {
           extract: "hsl(var(--grid-extract))",
           mismatch: "hsl(var(--grid-mismatch))",
           match: "hsl(var(--grid-match))",
+          orange: "hsl(var(--grid-orange))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

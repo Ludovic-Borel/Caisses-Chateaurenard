@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths } from "@/lib/storage";
-import { saveWithFilePicker } from "@/lib/export";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange } from "@/lib/storage";
+import { initializeSupabase } from "@/lib/setup";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
-import { supabase } from "@/integrations/supabase/client";
+import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, saveNewBackup, updateExistingBackup, getSaveFileName } from "@/lib/backup";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
@@ -11,8 +11,16 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import ImportReportDialog from "@/components/ImportReportDialog";
+import BackupSaveDialog from "@/components/BackupSaveDialog";
 import { Button } from "@/components/ui/button";
-import { Save, TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -34,15 +42,31 @@ export default function Index() {
     unmatched: { name: string; days: number; total: number }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backupDirName, setBackupDirName] = useState<string | null>(getBackupDirName());
+  const [templateFileName, setTemplateFileName] = useState<string | null>(getTemplateFileName());
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
   const dataRef = useRef(data);
   const driversRef = useRef(drivers);
 
-  // Initial load + migration
+  // Initial load + Supabase init + migration + realtime
   useEffect(() => {
     (async () => {
+      // Initialize Supabase (sign in + create tables if needed)
+      const supabaseReady = await initializeSupabase();
+      if (supabaseReady) {
+        console.log("Supabase initialized successfully");
+        // Enable real-time subscriptions
+        await enableRealtime();
+      } else {
+        console.log("Supabase not available, using localStorage only");
+      }
+
+      // Migrate local data to Supabase
       await migrateLocalToRemote();
+
+      // Load initial data
       const [m, d] = await Promise.all([
         loadMonth(now.getFullYear(), now.getMonth()),
         loadDrivers(),
@@ -54,6 +78,39 @@ export default function Index() {
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Real-time listeners for the current month
+  useEffect(() => {
+    if (loading) return;
+
+    // Listen for changes to the current month data
+    const unsubMonth = onMonthChange(data.year, data.month, (updatedData) => {
+      console.log(`Real-time update: month ${data.year}-${data.month} changed`);
+      // Only update if we're not the one who saved (avoid double-save)
+      // We use skipNextSave to prevent re-saving the same data
+      skipNextSave.current = true;
+      setData(updatedData);
+    });
+
+    // Listen for drivers list changes
+    const unsubDrivers = onDriversChange((updatedDrivers) => {
+      console.log("Real-time update: drivers list changed");
+      skipNextDriversSave.current = true;
+      setDrivers(updatedDrivers);
+    });
+
+    return () => {
+      unsubMonth();
+      unsubDrivers();
+    };
+  }, [data.year, data.month, loading]);
+
+  // Cleanup: remove realtime listeners on unmount
+  useEffect(() => {
+    return () => {
+      // Realtime channels are cleaned up automatically on page unload
+    };
   }, []);
 
   // Debounced save of month data
@@ -72,31 +129,6 @@ export default function Index() {
     return () => clearTimeout(t);
   }, [drivers]);
 
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel("recettes-sync")
-      .on("postgres_changes", { event: "*", schema: "public", table: "month_data" }, (payload) => {
-        const row = (payload.new || payload.old) as { year: number; month: number; data: MonthData } | null;
-        if (!row) return;
-        if (row.year === dataRef.current.year && row.month === dataRef.current.month && payload.new) {
-          const incoming = (payload.new as { data: MonthData }).data;
-          if (JSON.stringify(incoming) !== JSON.stringify(dataRef.current)) {
-            skipNextSave.current = true;
-            setData({ ...incoming, year: row.year, month: row.month });
-          }
-        }
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, async () => {
-        const list = await loadDrivers();
-        if (JSON.stringify(list) !== JSON.stringify(driversRef.current)) {
-          skipNextDriversSave.current = true;
-          setDrivers(list);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
 
   const handleMonthChange = useCallback(async (year: number, month: number) => {
     setLoading(true);
@@ -157,13 +189,6 @@ export default function Index() {
     renameDriverRemote(oldName, newName);
     toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
   }, [selectedDriver]);
-
-  const handleExportExcel = useCallback(async () => {
-    const saved = await saveWithFilePicker(data, drivers);
-    if (saved) {
-      toast.success(`Recettes Lignes ${MONTH_NAMES[data.month]} ${data.year} exporté !`);
-    }
-  }, [data, drivers]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extractionFileRef = useRef<HTMLInputElement>(null);
@@ -297,24 +322,144 @@ export default function Index() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
+  // ---------- Backup handlers ----------
+  const handleSelectBackupDir = useCallback(async () => {
+    const result = await selectBackupDir();
+    if (result) {
+      setBackupDirName(result.name);
+      toast.success(`Dossier de sauvegarde : ${result.name}`);
+    }
+  }, []);
+
+  const handleClearBackupDir = useCallback(async () => {
+    await clearBackupDir();
+    setBackupDirName(null);
+    toast.success("Dossier de sauvegarde retiré");
+  }, []);
+
+  const handleSelectTemplateFile = useCallback(async () => {
+    const result = await selectTemplateFile();
+    if (result) {
+      setTemplateFileName(result.name);
+      toast.success(`Fichier modèle : ${result.name}`);
+    }
+  }, []);
+
+  const handleClearTemplateFile = useCallback(async () => {
+    await clearTemplateFile();
+    setTemplateFileName(null);
+    toast.success("Fichier modèle retiré");
+  }, []);
+
+  const handleSaveBackup = useCallback(async () => {
+    if (!backupDirName) {
+      setShowSaveDialog(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const saved = await saveBackup(data, drivers);
+      if (saved) {
+        toast.success(`Sauvegarde effectuée : ${MONTH_NAMES[data.month]} ${data.year}`);
+      } else {
+        toast.error("Aucun dossier de sauvegarde sélectionné. Cliquez d'abord sur ⚙ Config sauvegarde.");
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(`Erreur sauvegarde : ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [data, drivers, backupDirName]);
+
+  const handleSaveToXlsm = useCallback(async (mode: "new" | "update", file?: File) => {
+    if (mode === "new") {
+      const saved = await saveNewBackup(data, drivers);
+      if (saved) {
+        toast.success(`Sauvegarde créée : ${getSaveFileName(data)}`);
+      } else {
+        toast.error("Sauvegarde annulée");
+      }
+    } else {
+      const saved = await updateExistingBackup(data, drivers, file);
+      if (saved) {
+        toast.success(`Fichier mis à jour : ${file?.name || getSaveFileName(data)}`);
+      } else {
+        toast.error("Mise à jour annulée");
+      }
+    }
+  }, [data, drivers]);
+
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-4">
-            <img src={logo} alt="Pastouret Rubans-Bleus" className="h-12 object-contain" />
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-center">Recettes Lignes</h1>
-              <p className="text-primary-foreground/70 text-sm">Suivi Mensuel des Recettes Mensuelles en Temps Réel</p>
-            </div>
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
+          <img src={logo} alt="Pastouret Rubans-Bleus" className="h-10 object-contain justify-self-start" />
+          <div className="flex flex-col items-center justify-center gap-1">
+            <h1 className="text-xl font-bold tracking-tight">Caisses Chateaurenard</h1>
+            <p className="text-primary-foreground/70 text-sm">Relevé des Caisses Mensuel</p>
+          </div>
+          <div className="flex items-center gap-2 justify-self-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="text-xs h-8">
+                  <Settings2 className="h-3.5 w-3.5 mr-1" /> Config sauvegarde
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {/* Backup folder */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectBackupDir(); }} className="cursor-pointer">
+                  <Folder className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Dossier de sauvegarde</span>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                      {backupDirName || "Non défini"}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                {backupDirName && (
+                  <DropdownMenuItem onSelect={handleClearBackupDir} className="cursor-pointer text-destructive">
+                    <Folder className="h-4 w-4 mr-2" />
+                    <span>Retirer le dossier</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {/* Template file */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectTemplateFile(); }} className="cursor-pointer">
+                  <FileText className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Fichier modèle vierge</span>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                      {templateFileName || "Aucun (export normal)"}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                {templateFileName && (
+                  <DropdownMenuItem onSelect={handleClearTemplateFile} className="cursor-pointer text-destructive">
+                    <FileText className="h-4 w-4 mr-2" />
+                    <span>Retirer le modèle</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setShowSaveDialog(true)}
+              title="Sauvegarder le mois au format .xlsm"
+            >
+              <FileArchive className="h-3.5 w-3.5 mr-1" /> Sauvegarder
+            </Button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center flex-wrap gap-3">
           <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
           <Button
@@ -382,17 +527,12 @@ export default function Index() {
               />
             </>
           )}
-          {!isCurrentMonth && (
-            <Button onClick={handleExportExcel} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Save className="h-4 w-4 mr-2" /> Exporter Excel
-            </Button>
-          )}
         </div>
       </div>
 
-      <main className="max-w-[1600px] mx-auto px-6 pb-8">
+      <main className="px-6 pb-8">
         <div className="flex gap-6">
-          <div className="w-64 flex-shrink-0">
+          <div className="w-[280px] flex-shrink-0">
             <DriverList
               drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
               activeDrivers={drivers}
@@ -435,6 +575,12 @@ export default function Index() {
       </main>
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
+      <BackupSaveDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        data={data}
+        onSave={handleSaveToXlsm}
+      />
     </div>
   );
 }

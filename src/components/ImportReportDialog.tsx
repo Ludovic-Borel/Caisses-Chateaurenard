@@ -100,7 +100,7 @@ export default function ImportReportDialog({ report, onClose }: Props) {
         <div className="overflow-y-auto flex-1 space-y-6 pr-2">
           {report && report.unmatched.length > 0 && (
             <section>
-              <h3 className="font-bold text-destructive mb-2">
+              <h3 className="font-bold mb-2">
                 Chauffeurs non rapprochés ({report.unmatched.length})
               </h3>
               <p className="text-xs text-muted-foreground mb-2">

@@ -70,9 +70,8 @@ export default function Dashboard({ currentData, drivers }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 pb-4 border-b border-border">
-        <img src={logo} alt="Logo" className="h-10 object-contain" />
-        <div>
+      <div className="pb-4 border-b border-border">
+        <div className="text-center">
           <h2 className="text-lg font-bold text-primary">Tableau de bord</h2>
           <p className="text-sm text-muted-foreground">{MONTH_NAMES[currentData.month]} {currentData.year}</p>
         </div>
@@ -154,7 +153,7 @@ export default function Dashboard({ currentData, drivers }: Props) {
                   <td className="border border-border px-3 py-1 font-medium">{d.name}</td>
                   <td className="border border-border px-3 py-1 text-right font-bold">{fmt(d.total)}</td>
                   <td className="border border-border px-3 py-1 text-right">{pct(d.total, stats.grandTotal)}%</td>
-                  <td className={`border border-border px-3 py-1 text-right ${d.notReturned > 0 ? "text-destructive font-bold" : ""}`}>
+                  <td className={`border border-border px-3 py-1 text-right ${d.notReturned > 0 ? "font-bold" : ""}`}>
                     {d.notReturned > 0 ? fmt(d.notReturned) : "—"}
                   </td>
                 </tr>
@@ -199,10 +198,12 @@ export default function Dashboard({ currentData, drivers }: Props) {
 
 function KpiCard({ label, value, sub, accent, danger }: { label: string; value: string; sub?: string; accent?: boolean; danger?: boolean }) {
   return (
-    <div className={`rounded-lg border p-3 ${accent ? "bg-primary text-primary-foreground border-primary" : danger ? "bg-destructive/10 border-destructive/30" : "bg-card border-border"}`}>
+    <div className={`rounded-lg border p-3 flex flex-col ${accent ? "bg-primary text-primary-foreground border-primary" : danger ? "bg-destructive/10 border-destructive/30" : "bg-card border-border"}`}>
       <p className={`text-[10px] uppercase tracking-wider font-medium ${accent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{label}</p>
-      <p className={`text-lg font-bold mt-0.5 ${danger && !accent ? "text-destructive" : ""}`}>{value}</p>
-      {sub && <p className={`text-xs ${accent ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{sub}</p>}
+      <div className="flex-1 flex flex-col items-center justify-center text-center">
+        <p className={`text-lg font-bold ${danger && !accent ? "text-destructive" : ""}`}>{value}</p>
+        {sub && <p className={`text-xs ${accent ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{sub}</p>}
+      </div>
     </div>
   );
 }
