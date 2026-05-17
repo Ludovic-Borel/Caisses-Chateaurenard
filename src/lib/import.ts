@@ -252,7 +252,7 @@ export function normalizeDriverName(name: string): string {
     .toUpperCase();
 }
 
-function lineToCategory(ligne: unknown): Category | null {
+export function lineToCategory(ligne: unknown): Category | null {
   if (ligne == null) return null;
   const s = String(ligne).trim();
   // Try 4-digit first (Scolaires 7400-7404 et 7500-7507)
@@ -270,7 +270,7 @@ function lineToCategory(ligne: unknown): Category | null {
   return null;
 }
 
-function paymentToType(p: unknown): "especes" | "cb" {
+export function paymentToType(p: unknown): "especes" | "cb" {
   const s = String(p || "").toLowerCase();
   if (/esp[èe]ce/.test(s)) return "especes";
   return "cb";

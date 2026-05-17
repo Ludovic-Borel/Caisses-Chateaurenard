@@ -4,8 +4,9 @@ import { MonthData, CATEGORIES, getCellKey, getDaysInMonth } from "./types";
 /**
  * Detect driver names from row 1 of the Recap sheet.
  * Returns an array of {name, startCol} for each driver found, in order.
+ * @internal exported for testing
  */
-function detectDrivers(ws: ExcelJS.Worksheet): { name: string; startCol: number }[] {
+export function detectDrivers(ws: ExcelJS.Worksheet): { name: string; startCol: number }[] {
   const drivers: { name: string; startCol: number }[] = [];
   const row1 = ws.getRow(1);
   let lastName = "";
@@ -32,17 +33,20 @@ function detectDrivers(ws: ExcelJS.Worksheet): { name: string; startCol: number 
  * Within that block, assign columns in pairs: each category gets 2 columns (Esp., CB),
  * in the standard order: 704, 705, 707, 708, 915, Scolaires.
  * The remaining columns after 12 data columns are totals (we skip those).
+ * @internal exported for testing
  */
-function getDriverDataColumns(
+export function getDriverDataColumns(
   ws: ExcelJS.Worksheet,
   drivers: { name: string; startCol: number }[]
 ): Map<string, { espCol: number; cbCol: number }[]> {
   const result = new Map<string, { espCol: number; cbCol: number }[]>();
+  // Use the row 1 cell count as a reliable measure of actual column width
+  const totalCols = Math.max(ws.columnCount, ws.getRow(1).cellCount, ws.getRow(2).cellCount);
 
   for (let i = 0; i < drivers.length; i++) {
     const driver = drivers[i];
-    const nextStart = i + 1 < drivers.length ? drivers[i + 1].startCol : ws.columnCount + 1;
-    const blockEnd = Math.min(nextStart, ws.columnCount + 1);
+    const nextStart = i + 1 < drivers.length ? drivers[i + 1].startCol : totalCols + 1;
+    const blockEnd = Math.min(nextStart, totalCols + 1);
     
     const cols: { espCol: number; cbCol: number }[] = [];
     let col = driver.startCol;
