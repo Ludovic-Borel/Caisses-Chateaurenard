@@ -18,9 +18,9 @@ export async function initializeSupabase(): Promise<boolean> {
       return false;
     }
 
-    // Check if months table exists by querying it
+    // Check if month_data table exists by querying it
     const { error: monthsCheck } = await supabase
-      .from("months")
+      .from("month_data")
       .select("id")
       .limit(1);
 
@@ -50,31 +50,31 @@ async function createTablesIfNeeded(): Promise<boolean> {
 
     const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 
-    // Create months table
+    // Create month_data table (matching existing structure)
     const sqlCreateMonths = `
-      CREATE TABLE IF NOT EXISTS public.months (
-        id BIGSERIAL PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS public.month_data (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         year INTEGER NOT NULL,
         month INTEGER NOT NULL,
         data JSONB NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(year, month)
       );
-      CREATE INDEX IF NOT EXISTS idx_months_year_month ON public.months(year, month);
-      ALTER TABLE public.months ENABLE ROW LEVEL SECURITY;
-      DROP POLICY IF EXISTS "Public access" ON public.months;
-      CREATE POLICY "Public access" ON public.months FOR ALL USING (true) WITH CHECK (true);
-      ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.months;
+      CREATE INDEX IF NOT EXISTS idx_month_data_year_month ON public.month_data(year, month);
+      ALTER TABLE public.month_data ENABLE ROW LEVEL SECURITY;
+      DROP POLICY IF EXISTS "Public access" ON public.month_data;
+      CREATE POLICY "Public access" ON public.month_data FOR ALL USING (true) WITH CHECK (true);
+      ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.month_data;
     `;
 
-    // Create drivers table
+    // Create drivers table (each driver as its own row)
     const sqlCreateDrivers = `
       CREATE TABLE IF NOT EXISTS public.drivers (
-        id BIGSERIAL PRIMARY KEY,
-        names JSONB NOT NULL DEFAULT '[]'::jsonb,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
-      INSERT INTO public.drivers (id, names) VALUES (1, '[]'::jsonb) ON CONFLICT (id) DO NOTHING;
+      CREATE INDEX IF NOT EXISTS idx_drivers_name ON public.drivers(name);
       ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
       DROP POLICY IF EXISTS "Public access" ON public.drivers;
       CREATE POLICY "Public access" ON public.drivers FOR ALL USING (true) WITH CHECK (true);
@@ -96,7 +96,7 @@ async function createTablesIfNeeded(): Promise<boolean> {
 
     if (!response.ok) {
       const errBody = await response.text();
-      console.warn("Failed to create months table:", response.status, errBody);
+      console.warn("Failed to create month_data table:", response.status, errBody);
       return false;
     }
 
@@ -121,10 +121,8 @@ async function createTablesIfNeeded(): Promise<boolean> {
     const trgMonths = `
       CREATE OR REPLACE FUNCTION public.update_updated_at()
       RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
-      DROP TRIGGER IF EXISTS trg_months_updated_at ON public.months;
-      CREATE TRIGGER trg_months_updated_at BEFORE UPDATE ON public.months FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-      DROP TRIGGER IF EXISTS trg_drivers_updated_at ON public.drivers;
-      CREATE TRIGGER trg_drivers_updated_at BEFORE UPDATE ON public.drivers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+      DROP TRIGGER IF EXISTS trg_month_data_updated_at ON public.month_data;
+      CREATE TRIGGER trg_month_data_updated_at BEFORE UPDATE ON public.month_data FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
     `;
 
     await fetch(`https://api.supabase.com/v1/projects/${projectRef}/sql`, {
@@ -152,7 +150,7 @@ export async function isSupabaseAvailable(): Promise<boolean> {
     const { data } = await supabase.auth.getSession();
     if (!data.session) return false;
 
-    const { error } = await supabase.from("months").select("id").limit(1);
+    const { error } = await supabase.from("month_data").select("id").limit(1);
     return !error;
   } catch {
     return false;
