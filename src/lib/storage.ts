@@ -160,7 +160,7 @@ export async function loadDrivers(): Promise<string[]> {
 
     const names = data.names;
     if (Array.isArray(names)) {
-      // Sync back to localStorage for fallback
+      // Overwrite localStorage with server data (force sync)
       setLocalDrivers(names as string[]);
       return names as string[];
     }
@@ -192,6 +192,7 @@ export function renameDriverRemote(_oldName: string, _newName: string): void {
 
 // ---------- Month data ----------
 export async function loadMonth(year: number, month: number): Promise<MonthData | null> {
+  // Always try Supabase first
   try {
     const { data, error } = await supabase
       .from("months")
@@ -203,6 +204,8 @@ export async function loadMonth(year: number, month: number): Promise<MonthData 
     if (error) {
       if (error.code === "PGRST116") {
         // No rows found - normal, month doesn't exist yet
+        // Clear any stale localStorage entry
+        localStorage.removeItem(monthKey(year, month));
         return null;
       }
       throw error;
@@ -210,7 +213,7 @@ export async function loadMonth(year: number, month: number): Promise<MonthData 
 
     if (data?.data) {
       const monthData = data.data as MonthData;
-      // Sync back to localStorage for fallback
+      // Overwrite localStorage with server data (force sync)
       setLocalMonth(monthData);
       return monthData;
     }
