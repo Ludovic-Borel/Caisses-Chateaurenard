@@ -27,21 +27,21 @@ export async function enableRealtime(): Promise<void> {
   if (realtimeEnabled) return;
   realtimeEnabled = true;
 
-  // Subscribe to month_data table changes
+  // Subscribe to months table changes
   supabase
-    .channel("month_data-realtime")
+    .channel("months-realtime")
     .on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "month_data" },
+      { event: "*", schema: "public", table: "months" },
       (payload: RealtimePostgresChangesPayload<any>) => {
         handleMonthChange(payload);
       }
     )
     .subscribe((status: string) => {
       if (status === "SUBSCRIBED") {
-        console.log("Realtime: month_data channel connected");
+        console.log("Realtime: months channel connected");
       } else if (status === "CHANNEL_ERROR") {
-        console.warn("Realtime: month_data channel error");
+        console.warn("Realtime: months channel error");
       }
     });
 
@@ -77,14 +77,14 @@ function handleMonthChange(payload: RealtimePostgresChangesPayload<any>): void {
 }
 
 function handleDriversChange(payload: RealtimePostgresChangesPayload<any>): void {
-  // For the new drivers table (each driver is its own row),
-  // we just re-load all drivers and notify callbacks
-  loadAllDriversRemote().then((names) => {
-    if (names) {
-      setLocalDrivers(names);
-      driversCallbacks.forEach((cb) => cb(names));
+  if (payload.new && (payload.new as any).id === 1) {
+    const row = payload.new as any;
+    const names = typeof row.names === "string" ? JSON.parse(row.names) : row.names;
+    if (Array.isArray(names)) {
+      setLocalDrivers(names as string[]);
+      driversCallbacks.forEach((cb) => cb(names as string[]));
     }
-  });
+  }
 }
 
 // ---------- Callback registration ----------
@@ -148,32 +148,24 @@ function getLocalDrivers(): string[] {
 }
 
 // ---------- Drivers ----------
-/**
- * Load all drivers from the remote drivers table (each driver is its own row).
- */
-async function loadAllDriversRemote(): Promise<string[] | null> {
+export async function loadDrivers(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from("drivers")
-      .select("name")
-      .order("name", { ascending: true });
+      .select("names")
+      .eq("id", 1)
+      .single();
 
     if (error) throw error;
 
-    if (data) {
-      return data.map((row: any) => row.name as string);
+    const names = data.names;
+    if (Array.isArray(names)) {
+      // Sync back to localStorage for fallback
+      setLocalDrivers(names as string[]);
+      return names as string[];
     }
   } catch (e) {
-    console.warn("Supabase loadDrivers failed:", e);
-  }
-  return null;
-}
-
-export async function loadDrivers(): Promise<string[]> {
-  const remote = await loadAllDriversRemote();
-  if (remote !== null) {
-    setLocalDrivers(remote);
-    return remote;
+    console.warn("Supabase loadDrivers failed, using localStorage:", e);
   }
 
   return getLocalDrivers();
@@ -184,24 +176,11 @@ export async function saveDrivers(drivers: string[]): Promise<void> {
   setLocalDrivers(drivers);
 
   try {
-    // Replace all rows in the drivers table
-    // First delete all existing rows
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from("drivers")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all
+      .upsert({ id: 1, names: drivers }, { onConflict: "id" });
 
-    if (deleteError) throw deleteError;
-
-    // Then insert each driver as its own row
-    if (drivers.length > 0) {
-      const rows = drivers.map((name) => ({ name }));
-      const { error: insertError } = await supabase
-        .from("drivers")
-        .insert(rows);
-
-      if (insertError) throw insertError;
-    }
+    if (error) throw error;
   } catch (e) {
     console.warn("Supabase saveDrivers failed, saved locally:", e);
   }
@@ -215,7 +194,7 @@ export function renameDriverRemote(_oldName: string, _newName: string): void {
 export async function loadMonth(year: number, month: number): Promise<MonthData | null> {
   try {
     const { data, error } = await supabase
-      .from("month_data")
+      .from("months")
       .select("data")
       .eq("year", year)
       .eq("month", month)
@@ -249,7 +228,7 @@ export async function saveMonth(data: MonthData): Promise<void> {
 
   try {
     const { error } = await supabase
-      .from("month_data")
+      .from("months")
       .upsert(
         {
           year: data.year,
@@ -271,7 +250,7 @@ export async function loadAllMonths(): Promise<MonthData[]> {
   // Try Supabase first
   try {
     const { data, error } = await supabase
-      .from("month_data")
+      .from("months")
       .select("data")
       .order("year", { ascending: true })
       .order("month", { ascending: true });
@@ -311,7 +290,7 @@ export async function migrateLocalToRemote(): Promise<void> {
     if (key && key.startsWith(MONTH_KEY_PREFIX)) {
       try {
         const data: MonthData = JSON.parse(localStorage.getItem(key)!);
-        const { error } = await supabase.from("month_data").upsert(
+        const { error } = await supabase.from("months").upsert(
           { year: data.year, month: data.month, data },
           { onConflict: "year, month" }
         );
@@ -330,11 +309,10 @@ export async function migrateLocalToRemote(): Promise<void> {
   const localDrivers = getLocalDrivers();
   if (localDrivers.length > 0) {
     try {
-      // Delete all existing drivers
-      await supabase.from("drivers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      // Insert all local drivers
-      const rows = localDrivers.map((name) => ({ name }));
-      const { error } = await supabase.from("drivers").insert(rows);
+      const { error } = await supabase
+        .from("drivers")
+        .upsert({ id: 1, names: localDrivers }, { onConflict: "id" });
+
       if (error) {
         console.warn("Failed to migrate drivers:", error.message);
       }
