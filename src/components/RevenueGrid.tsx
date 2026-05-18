@@ -334,17 +334,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                   }
                                 }}
                               />
-                              {isOrange && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); copyExtractToEntered(day, cat); }}
-                                  className="shrink-0 w-4 h-4 ml-0.5 rounded text-[9px] leading-none font-bold bg-primary text-primary-foreground border border-primary opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity duration-150 group-hover:opacity-100"
-                                  title="Copier les montants d'extraction dans Esp. et CB"
-                                  style={{ opacity: (hoverDay === day || hoverCol === xKey) ? 1 : 0 }}
-                                >
-                                  ⇧
-                                </button>
-                              )}
                             </>
                           )}
                         </div>
