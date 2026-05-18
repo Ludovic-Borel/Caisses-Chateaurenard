@@ -1,4 +1,4 @@
-export const CATEGORIES = ["704", "705", "707", "708", "915", "Scolaires"] as const;
+﻿export const CATEGORIES = ["704", "705", "707", "708", "915", "Scolaires"] as const;
 export type Category = typeof CATEGORIES[number];
 export const PAYMENT_TYPES = ["especes", "cb"] as const;
 export type PaymentType = typeof PAYMENT_TYPES[number];
@@ -19,7 +19,7 @@ export interface MonthData {
   year: number;
   month: number; // 0-11
   drivers: Record<string, DriverMonthData>;
-  // Global "récap" grid kept for backward compat
+  // Global "recap" grid kept for backward compat
   days: Record<number, DayEntry>;
 }
 
@@ -40,22 +40,18 @@ export function getDaysInMonth(year: number, month: number): number {
 }
 
 export const MONTH_NAMES = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+  "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre"
 ];
 
-// Complete list of all drivers found across all months in the data
 export const DEFAULT_DRIVERS = [
-  "ABBADI", "ABOUBAKAR", "AJHIOU", "ALKAMA", "ARKOUS",
-  "BELHAJ", "BENRAHHOU", "BENRAHOU", "BENZEROUK", "BENZERROUK",
-  "BERNARAS", "BOUBAKRI", "BOUSSARIE", "CALATAYUD", "CHAKOR",
-  "CHAMANIER", "CHAMBRON", "CHAROUITE", "CHAVOUTIER", "CHOPIN",
-  "CHOUANE", "CHOUHANE", "DJAHMI", "DRID", "DUMONT",
-  "EL BADRI", "ESPOSITO", "FARE", "FATIHI", "FILIPE",
-  "GHRIB", "GILLES", "GOZIN", "GUILLOT", "HAJJI",
-  "ISOARDO", "JUAN", "LACOMBE", "LE BIGOT", "M'HAYA",
-  "MACHABERT", "MAFFEI", "MARCON", "MEYER", "MHAYA M",
-  "MSELLI", "PALOMARES", "PANAROTTO", "PREAUX A", "RASCOL",
-  "REY M", "ROLLAND", "STANGHELLINI", "SYLVESTRE", "TANNOUCH",
-  "THOMASSIN"
+  "ABBADI", "ABOUBAKAR", "ALKAMA", "ARKOUS", "AJHIOU", "BEC", "BELHAJ",
+  "BENRAHOU", "BENZEROUK", "BERNARAS", "BOREL", "CALATAYUD", "CAMPOS",
+  "CHAKOR", "CHAMANIER", "CHAMBRON", "CHAROUITE", "CHAVOUTIER", "CHOUANE",
+  "DJAHMI", "DRID", "EL BADRI", "ESPOSITO", "FARE", "FATIHI", "FILIPE",
+  "GHRIB", "GILLES", "GOZIN", "GUILLOT", "HAJJI", "ISOARDO", "JUAN",
+  "LACOMBE", "LE BIGOT", "MHAYA M", "MHAYA N", "MACHABERT", "MAFFEI",
+  "MANFRINI", "MARCON", "MARTINEZ", "MEYER", "MSELLI", "PALOMARES",
+  "PANAROTTO", "PREAUX A", "RAKOTO", "RASCOL", "REY J", "REY M", "REY T",
+  "ROLLAND", "STANGHELLINI", "TANNOUCH", "THOMASSIN"
 ];
