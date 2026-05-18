@@ -23,12 +23,15 @@ function getMonthKeyId(year: number, month: number): string {
  * Initialize real-time listeners for Supabase changes.
  * Call this once on app startup.
  */
-export async function enableRealtime(): Promise<void> {
-  if (realtimeEnabled) return;
+export async function enableRealtime(): Promise<boolean> {
+  if (realtimeEnabled) return true;
   realtimeEnabled = true;
 
+  let monthOk = false;
+  let driversOk = false;
+
   // Subscribe to months table changes
-  supabase
+  const monthSub = supabase
     .channel("months-realtime")
     .on(
       "postgres_changes",
@@ -39,14 +42,15 @@ export async function enableRealtime(): Promise<void> {
     )
     .subscribe((status: string) => {
       if (status === "SUBSCRIBED") {
-        console.log("Realtime: months channel connected");
+        console.log("[Supabase] Realtime months channel connected");
+        monthOk = true;
       } else if (status === "CHANNEL_ERROR") {
-        console.warn("Realtime: months channel error");
+        console.warn("[Supabase] Realtime months channel error");
       }
     });
 
   // Subscribe to drivers table changes
-  supabase
+  const driversSub = supabase
     .channel("drivers-realtime")
     .on(
       "postgres_changes",
@@ -57,11 +61,16 @@ export async function enableRealtime(): Promise<void> {
     )
     .subscribe((status: string) => {
       if (status === "SUBSCRIBED") {
-        console.log("Realtime: drivers channel connected");
+        console.log("[Supabase] Realtime drivers channel connected");
+        driversOk = true;
       } else if (status === "CHANNEL_ERROR") {
-        console.warn("Realtime: drivers channel error");
+        console.warn("[Supabase] Realtime drivers channel error");
       }
     });
+
+  // Wait a moment for subscriptions to connect
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  return monthOk && driversOk;
 }
 
 function handleMonthChange(payload: RealtimePostgresChangesPayload<any>): void {
@@ -147,6 +156,65 @@ function getLocalDrivers(): string[] {
   return raw ? JSON.parse(raw) : DEFAULT_DRIVERS;
 }
 
+// ---------- Check connection ----------
+export interface SupabaseStatus {
+  connected: boolean;
+  monthsTable: boolean;
+  driversTable: boolean;
+  driversCount: number;
+  monthsCount: number;
+  error: string | null;
+}
+
+export async function checkSupabaseStatus(): Promise<SupabaseStatus> {
+  const status: SupabaseStatus = {
+    connected: false,
+    monthsTable: false,
+    driversTable: false,
+    driversCount: 0,
+    monthsCount: 0,
+    error: null,
+  };
+
+  try {
+    // Check if we can reach Supabase at all
+    const { error: pingErr } = await supabase.from("months").select("id").limit(1);
+    if (pingErr) {
+      status.error = `Erreur table months: ${pingErr.message} (code: ${pingErr.code})`;
+      return status;
+    }
+    status.connected = true;
+    status.monthsTable = true;
+
+    // Count months
+    const { count: monthCount, error: monthCountErr } = await supabase
+      .from("months")
+      .select("id", { count: "exact", head: true });
+    if (!monthCountErr && monthCount !== null) {
+      status.monthsCount = monthCount;
+    }
+
+    // Check drivers table
+    const { data: driverData, error: driverErr } = await supabase
+      .from("drivers")
+      .select("names")
+      .eq("id", 1)
+      .single();
+    if (driverErr) {
+      status.error = `Erreur table drivers: ${driverErr.message} (code: ${driverErr.code})`;
+      return status;
+    }
+    status.driversTable = true;
+    if (driverData && Array.isArray(driverData.names)) {
+      status.driversCount = driverData.names.length;
+    }
+  } catch (e: any) {
+    status.error = `Exception: ${e?.message || String(e)}`;
+  }
+
+  return status;
+}
+
 // ---------- Drivers ----------
 export async function loadDrivers(): Promise<string[]> {
   try {
@@ -171,7 +239,7 @@ export async function loadDrivers(): Promise<string[]> {
   return getLocalDrivers();
 }
 
-export async function saveDrivers(drivers: string[]): Promise<void> {
+export async function saveDrivers(drivers: string[]): Promise<{ ok: boolean; error?: string }> {
   // Always save locally first
   setLocalDrivers(drivers);
 
@@ -181,8 +249,11 @@ export async function saveDrivers(drivers: string[]): Promise<void> {
       .upsert({ id: 1, names: drivers }, { onConflict: "id" });
 
     if (error) throw error;
-  } catch (e) {
-    console.warn("Supabase saveDrivers failed, saved locally:", e);
+    return { ok: true };
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    console.warn("Supabase saveDrivers failed, saved locally:", msg);
+    return { ok: false, error: msg };
   }
 }
 
@@ -225,7 +296,7 @@ export async function loadMonth(year: number, month: number): Promise<MonthData 
   }
 }
 
-export async function saveMonth(data: MonthData): Promise<void> {
+export async function saveMonth(data: MonthData): Promise<{ ok: boolean; error?: string }> {
   // Always save locally first
   setLocalMonth(data);
 
@@ -242,8 +313,11 @@ export async function saveMonth(data: MonthData): Promise<void> {
       );
 
     if (error) throw error;
-  } catch (e) {
-    console.warn("Supabase saveMonth failed, saved locally:", e);
+    return { ok: true };
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    console.warn("Supabase saveMonth failed, saved locally:", msg);
+    return { ok: false, error: msg };
   }
 }
 
@@ -284,32 +358,53 @@ export async function loadAllMonths(): Promise<MonthData[]> {
 }
 
 // ---------- Migration (local → Supabase) ----------
-export async function migrateLocalToRemote(): Promise<void> {
-  let migratedCount = 0;
+export interface MigrationResult {
+  monthsMigrated: number;
+  monthsTotal: number;
+  driversMigrated: boolean;
+  driversCount: number;
+  errors: string[];
+}
+
+export async function migrateLocalToRemote(): Promise<MigrationResult> {
+  const result: MigrationResult = {
+    monthsMigrated: 0,
+    monthsTotal: 0,
+    driversMigrated: false,
+    driversCount: 0,
+    errors: [],
+  };
 
   // Migrate months
+  const monthKeys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith(MONTH_KEY_PREFIX)) {
-      try {
-        const data: MonthData = JSON.parse(localStorage.getItem(key)!);
-        const { error } = await supabase.from("months").upsert(
-          { year: data.year, month: data.month, data },
-          { onConflict: "year, month" }
-        );
-        if (error) {
-          console.warn(`Failed to migrate month ${key}:`, error.message);
-        } else {
-          migratedCount++;
-        }
-      } catch (e) {
-        console.warn(`Failed to migrate month ${key}:`, e);
+      monthKeys.push(key);
+    }
+  }
+  result.monthsTotal = monthKeys.length;
+
+  for (const key of monthKeys) {
+    try {
+      const data: MonthData = JSON.parse(localStorage.getItem(key)!);
+      const { error } = await supabase.from("months").upsert(
+        { year: data.year, month: data.month, data },
+        { onConflict: "year, month" }
+      );
+      if (error) {
+        result.errors.push(`Mois ${key}: ${error.message}`);
+      } else {
+        result.monthsMigrated++;
       }
+    } catch (e: any) {
+      result.errors.push(`Mois ${key}: ${e?.message || String(e)}`);
     }
   }
 
   // Migrate drivers
   const localDrivers = getLocalDrivers();
+  result.driversCount = localDrivers.length;
   if (localDrivers.length > 0) {
     try {
       const { error } = await supabase
@@ -317,16 +412,16 @@ export async function migrateLocalToRemote(): Promise<void> {
         .upsert({ id: 1, names: localDrivers }, { onConflict: "id" });
 
       if (error) {
-        console.warn("Failed to migrate drivers:", error.message);
+        result.errors.push(`Drivers: ${error.message}`);
+      } else {
+        result.driversMigrated = true;
       }
-    } catch (e) {
-      console.warn("Failed to migrate drivers:", e);
+    } catch (e: any) {
+      result.errors.push(`Drivers: ${e?.message || String(e)}`);
     }
   }
 
-  if (migratedCount > 0) {
-    console.log(`Migration complete: ${migratedCount} months synced to Supabase`);
-  }
+  return result;
 }
 
 // Helpers for loading-by-keys

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange } from "@/lib/storage";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange, checkSupabaseStatus, type SupabaseStatus, type MigrationResult } from "@/lib/storage";
 import { initializeSupabase } from "@/lib/setup";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
 import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, saveNewBackup, updateExistingBackup, getSaveFileName } from "@/lib/backup";
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -45,6 +45,8 @@ export default function Index() {
   const [backupDirName, setBackupDirName] = useState<string | null>(getBackupDirName());
   const [templateFileName, setTemplateFileName] = useState<string | null>(getTemplateFileName());
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<SupabaseStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
   const dataRef = useRef(data);
@@ -65,6 +67,11 @@ export default function Index() {
 
       // Migrate local data to Supabase
       await migrateLocalToRemote();
+
+      // Check Supabase status
+      const status = await checkSupabaseStatus();
+      setSupabaseStatus(status);
+      console.log("[Supabase] Status:", status);
 
       // Load initial data
       const [m, d] = await Promise.all([
@@ -128,6 +135,34 @@ export default function Index() {
     const t = setTimeout(() => { saveDrivers(drivers); }, 500);
     return () => clearTimeout(t);
   }, [drivers]);
+
+  // ---------- Sync handler ----------
+  const handleSyncToSupabase = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result: MigrationResult = await migrateLocalToRemote();
+      
+      // Refresh status after sync
+      const status = await checkSupabaseStatus();
+      setSupabaseStatus(status);
+      
+      if (result.errors.length > 0) {
+        toast.error(
+          `Sync terminé avec ${result.errors.length} erreur(s) : ${result.errors.slice(0, 3).join("; ")}` +
+            (result.errors.length > 3 ? `... (${result.errors.length - 3} autres)` : ""),
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(
+          `Synchronisé ! ${result.monthsMigrated}/${result.monthsTotal} mois et ${result.driversCount} conducteurs envoyés à Supabase`
+        );
+      }
+    } catch (e: any) {
+      toast.error(`Erreur sync : ${e?.message || String(e)}`);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
 
 
   const handleMonthChange = useCallback(async (year: number, month: number) => {
@@ -480,9 +515,46 @@ export default function Index() {
             </span>
           )}
         </div>
-        <div className="flex items-center flex-wrap gap-3">
-          <Button
-            variant={extractionMode ? "default" : "outline"}
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Supabase status badge */}
+            {supabaseStatus && (
+              <div
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer ${
+                  supabaseStatus.connected && supabaseStatus.monthsTable && supabaseStatus.driversTable
+                    ? "bg-green-100 text-green-800 border border-green-300"
+                    : "bg-red-100 text-red-800 border border-red-300"
+                }`}
+                onClick={handleSyncToSupabase}
+                title={
+                  supabaseStatus.error
+                    ? `Erreur: ${supabaseStatus.error}`
+                    : `${supabaseStatus.monthsCount} mois, ${supabaseStatus.driversCount} conducteurs`
+                }
+              >
+                <Database className="h-3 w-3" />
+                <span>
+                  {syncing
+                    ? "Sync..."
+                    : supabaseStatus.connected && supabaseStatus.monthsTable && supabaseStatus.driversTable
+                    ? `${supabaseStatus.monthsCount}M ${supabaseStatus.driversCount}C`
+                    : "Déconnecté"}
+                </span>
+              </div>
+            )}
+            {!supabaseStatus?.connected && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={handleSyncToSupabase}
+                disabled={syncing}
+              >
+                <Database className="h-3.5 w-3.5 mr-1" />
+                {syncing ? "Sync..." : "Sync Supabase"}
+              </Button>
+            )}
+            <Button
+              variant={extractionMode ? "default" : "outline"}
             onClick={() => {
               const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
               if (list.length === 0) {
@@ -497,7 +569,19 @@ export default function Index() {
           </Button>
           {extractionMode && (
             <>
-              <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
+            {supabaseStatus?.connected && supabaseStatus.monthsTable && supabaseStatus.driversTable && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={handleSyncToSupabase}
+                disabled={syncing}
+              >
+                <Database className="h-3.5 w-3.5 mr-1" />
+                {syncing ? "Sync..." : "Sync Supabase"}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
                 <FileDown className="h-4 w-4 mr-2" /> Importer Extraction
               </Button>
               <input

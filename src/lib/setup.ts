@@ -50,7 +50,7 @@ async function createTablesIfNeeded(): Promise<boolean> {
 
     const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 
-    // Create months table
+    // Create months table (using DO blocks to avoid ALTER PUBLICATION syntax errors)
     const sqlCreateMonths = `
       CREATE TABLE IF NOT EXISTS public.months (
         id BIGSERIAL PRIMARY KEY,
@@ -64,7 +64,12 @@ async function createTablesIfNeeded(): Promise<boolean> {
       ALTER TABLE public.months ENABLE ROW LEVEL SECURITY;
       DROP POLICY IF EXISTS "Public access" ON public.months;
       CREATE POLICY "Public access" ON public.months FOR ALL USING (true) WITH CHECK (true);
-      ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.months;
+      DO $$
+      BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.months;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END;
+      $$;
     `;
 
     // Create drivers table
@@ -78,7 +83,12 @@ async function createTablesIfNeeded(): Promise<boolean> {
       ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
       DROP POLICY IF EXISTS "Public access" ON public.drivers;
       CREATE POLICY "Public access" ON public.drivers FOR ALL USING (true) WITH CHECK (true);
-      ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.drivers;
+      DO $$
+      BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.drivers;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END;
+      $$;
     `;
 
     // Execute SQL via the Management API
