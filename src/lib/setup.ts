@@ -1,36 +1,56 @@
 import { supabase } from "./supabase";
 
 /**
- * Auto-initialize the Supabase database:
- * 1. Sign in with the provided credentials
- * 2. Try to create tables if they don't exist
+ * Auto-initialize the Supabase database.
+ * 
+ * NOTE: Les tables Supabase ont une politique RLS publique,
+ * donc l'authentification n'est pas nécessaire pour lire/écrire.
+ * 
+ * Cette fonction vérifie simplement que les tables existent.
+ * Si elles n'existent pas, elle essaie de les créer via l'API Management
+ * (ce qui nécessite une session auth valide - si ça échoue, on continue
+ *  sans, et l'utilisateur devra exécuter le SQL manuellement).
  */
 export async function initializeSupabase(): Promise<boolean> {
   try {
-    // Sign in with env credentials
+    // Tentative de connexion (optionnelle - les RLS sont publiques)
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: "Agent84@villeton.fr",
       password: "Qqqsssddd222+",
     });
-
     if (signInError) {
-      console.warn("Supabase auth sign-in failed:", signInError.message);
-      return false;
+      console.warn("Supabase auth sign-in failed (non bloquant):", signInError.message);
     }
 
-    // Check if months table exists by querying it
+    // Vérifier si la table months existe
     const { error: monthsCheck } = await supabase
       .from("months")
       .select("id")
       .limit(1);
 
-    if (monthsCheck && monthsCheck.code === "42P01") {
-      // Table doesn't exist — try creating it via the auth user's JWT
-      console.log("Supabase tables not found, attempting auto-setup...");
-      return await createTablesIfNeeded();
+    if (!monthsCheck) {
+      // Table existe = Supabase opérationnel
+      return true;
     }
 
-    return true;
+    if (monthsCheck.code === "42P01") {
+      // Table doesn't exist — try creating it via the auth user's JWT
+      console.log("Supabase tables not found, attempting auto-setup...");
+      const created = await createTablesIfNeeded();
+      if (created) return true;
+      
+      // Même si la création automatique échoue, on retourne true
+      // car l'app peut fonctionner localement et l'utilisateur
+      // peut exécuter le SQL manuellement.
+      console.warn(
+        "Auto-setup failed. Execute supabase-schema.sql in Supabase SQL Editor."
+      );
+      return false;
+    }
+
+    // Autre erreur (ex: table existe mais problème de permissions)
+    console.warn("Supabase months table check failed:", monthsCheck.message);
+    return false;
   } catch (e) {
     console.warn("Supabase initialization failed:", e);
     return false;
@@ -39,7 +59,6 @@ export async function initializeSupabase(): Promise<boolean> {
 
 async function createTablesIfNeeded(): Promise<boolean> {
   try {
-    // Use the supabase client to call the Management REST API
     const session = await supabase.auth.getSession();
     const accessToken = session.data.session?.access_token;
 
@@ -50,7 +69,7 @@ async function createTablesIfNeeded(): Promise<boolean> {
 
     const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 
-    // Create months table (using DO blocks to avoid ALTER PUBLICATION syntax errors)
+    // Create months table
     const sqlCreateMonths = `
       CREATE TABLE IF NOT EXISTS public.months (
         id BIGSERIAL PRIMARY KEY,
@@ -72,6 +91,24 @@ async function createTablesIfNeeded(): Promise<boolean> {
       $$;
     `;
 
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/sql`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ query: sqlCreateMonths }),
+      }
+    );
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.warn("Failed to create months table:", response.status, errBody);
+      return false;
+    }
+
     // Create drivers table
     const sqlCreateDrivers = `
       CREATE TABLE IF NOT EXISTS public.drivers (
@@ -90,25 +127,6 @@ async function createTablesIfNeeded(): Promise<boolean> {
       END;
       $$;
     `;
-
-    // Execute SQL via the Management API
-    const response = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}/sql`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ query: sqlCreateMonths }),
-      }
-    );
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.warn("Failed to create months table:", response.status, errBody);
-      return false;
-    }
 
     const response2 = await fetch(
       `https://api.supabase.com/v1/projects/${projectRef}/sql`,
@@ -159,9 +177,6 @@ async function createTablesIfNeeded(): Promise<boolean> {
  */
 export async function isSupabaseAvailable(): Promise<boolean> {
   try {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) return false;
-
     const { error } = await supabase.from("months").select("id").limit(1);
     return !error;
   } catch {
