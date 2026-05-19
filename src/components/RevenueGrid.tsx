@@ -304,13 +304,13 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                       >
                         <div className="flex items-center relative">
                           {readOnly ? (
-                            <span className={`block px-1 py-0.5 text-right w-full ${mismatch ? "font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
+                            <span className={`block px-1 py-0.5 text-right w-full ${mismatch && !totalsMatch ? "font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
                           ) : (
                             <>
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch ? "font-bold" : ""}`}
+                                className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch && !totalsMatch ? "font-bold" : ""}`}
                                 value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
                                 onFocus={() => {
                                   if (!isHoverDisabled) { setHoverDay(day); setHoverCol(xKey); }
