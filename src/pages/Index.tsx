@@ -622,7 +622,7 @@ export default function Index() {
                 </span>
               </div>
             )}
-            {!supabaseStatus?.connected && (
+            {!extractionMode && !supabaseStatus?.connected && (
               <Button
                 variant="outline"
                 size="sm"
@@ -650,19 +650,7 @@ export default function Index() {
           </Button>
           {extractionMode && (
             <>
-            {supabaseStatus?.connected && supabaseStatus.monthsTable && supabaseStatus.driversTable && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-8"
-                onClick={handleSyncToSupabase}
-                disabled={syncing}
-              >
-                <Database className="h-3.5 w-3.5 mr-1" />
-                {syncing ? "Sync..." : "Sync Supabase"}
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
+              <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
                 <FileDown className="h-4 w-4 mr-2" /> Importer Extraction
               </Button>
               <input
@@ -674,7 +662,7 @@ export default function Index() {
               />
             </>
           )}
-          {isCurrentMonth && (
+          {isCurrentMonth && !extractionMode && (
             <>
               <Button
                 variant="outline"
