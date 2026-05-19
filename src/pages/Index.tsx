@@ -386,12 +386,13 @@ export default function Index() {
                   Object.entries(result.data.drivers).map(([driver, importedData]) => {
                     const existingDriver = existing.drivers[driver] || { days: {} };
                     return [driver, {
-                      ...existingDriver,
-                      ...importedData,
                       days: {
                         ...existingDriver.days,
                         ...importedData.days,
                       },
+                      ...(importedData.notReturned && { notReturned: importedData.notReturned }),
+                      // Preserve extracts from existing driver
+                      ...(existingDriver.extracts && { extracts: existingDriver.extracts }),
                     }];
                   })
                 ),
