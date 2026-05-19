@@ -102,10 +102,10 @@ export default function RecapGrid({ data, drivers }: Props) {
                 {cat}
               </th>
             ))}
-            <th className="border border-border px-2 py-1.5 text-center text-sm">Espèces</th>
-            <th className="border border-border px-2 py-1.5 text-center text-sm">CB</th>
-            <th className="border border-border px-2 py-1.5 text-center text-sm">Total</th>
-            <th className="border border-border px-2 py-1.5 text-center text-sm">Non rendu</th>
+            <th className="border border-border px-2 py-1.5 text-center">Espèces</th>
+            <th className="border border-border px-2 py-1.5 text-center">CB</th>
+            <th className="border border-border px-2 py-1.5 text-center">Total</th>
+            <th className="border border-border px-2 py-1.5 text-center">Non rendu</th>
           </tr>
           <tr className="bg-secondary text-secondary-foreground">
             <th className="border border-border px-3 py-1"></th>
@@ -207,9 +207,9 @@ export default function RecapGrid({ data, drivers }: Props) {
                   {cat}
                 </th>
               ))}
-              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle text-sm">Espèces</th>
-              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle text-sm">CB</th>
-              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle text-sm">Total Esp.+CB</th>
+              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle">Espèces</th>
+              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle">CB</th>
+              <th rowSpan={2} className="border border-border px-2 py-1.5 text-center align-middle">Total Esp.+CB</th>
             </tr>
             <tr className="bg-secondary text-secondary-foreground">
               {CATEGORIES.map((cat) => (
