@@ -636,16 +636,21 @@ export default function Index() {
             )}
             <Button
               variant={extractionMode ? "default" : "outline"}
-            onClick={() => {
-              const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
-              if (list.length === 0) {
-                toast.error("Aucun chauffeur disponible");
-                return;
-              }
-              setExtractionMode(true);
-              setSelectedDriver(list[0]);
-            }}
-          >
+              onClick={() => {
+                if (extractionMode) {
+                  setExtractionMode(false);
+                  setSelectedDriver("__dashboard__");
+                  return;
+                }
+                const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
+                if (list.length === 0) {
+                  toast.error("Aucun chauffeur disponible");
+                  return;
+                }
+                setExtractionMode(true);
+                setSelectedDriver(list[0]);
+              }}
+            >
             <ScanLine className="h-4 w-4 mr-2" /> Extraction
           </Button>
           {extractionMode && (
