@@ -199,10 +199,10 @@ export default function Dashboard({ currentData, drivers }: Props) {
 function KpiCard({ label, value, sub, accent, danger }: { label: string; value: string; sub?: string; accent?: boolean; danger?: boolean }) {
   return (
     <div className={`rounded-lg border p-3 flex flex-col ${accent ? "bg-primary text-primary-foreground border-primary" : danger ? "bg-destructive/10 border-destructive/30" : "bg-card border-border"}`}>
-      <p className={`text-[10px] uppercase tracking-wider font-medium ${accent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{label}</p>
+      <p className={`text-xs uppercase tracking-wider font-semibold ${accent ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{label}</p>
       <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <p className={`text-lg font-bold ${danger && !accent ? "text-destructive" : ""}`}>{value}</p>
-        {sub && <p className={`text-xs ${accent ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{sub}</p>}
+        <p className={`text-xl font-bold ${danger && !accent ? "text-destructive" : ""}`}>{value}</p>
+        {sub && <p className={`text-sm ${accent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{sub}</p>}
       </div>
     </div>
   );
