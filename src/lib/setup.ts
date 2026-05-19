@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, configureSupabase, isSupabaseConfigured } from "./supabase";
 
 /**
  * Auto-initialize the Supabase database.
@@ -13,8 +13,22 @@ import { supabase } from "./supabase";
  */
 export async function initializeSupabase(): Promise<boolean> {
   try {
+    // If supabase client isn't configured yet, try to read runtime config from localStorage
+    try {
+      if (!isSupabaseConfigured() && typeof localStorage !== "undefined") {
+        const url = localStorage.getItem("SUPABASE_URL");
+        const key = localStorage.getItem("SUPABASE_KEY");
+        if (url && key) configureSupabase(url, key);
+      }
+    } catch {}
+
+    if (!isSupabaseConfigured()) {
+      console.warn("Supabase client not configured - skipping remote initialization");
+      return false;
+    }
+
     // Tentative de connexion (optionnelle - les RLS sont publiques)
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase!.auth.signInWithPassword({
       email: "Agent84@villeton.fr",
       password: "Qqqsssddd222+",
     });

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
 import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange, checkSupabaseStatus, type SupabaseStatus, type MigrationResult } from "@/lib/storage";
 import { initializeSupabase } from "@/lib/setup";
+import { configureSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
 import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, saveNewBackup, updateExistingBackup, getSaveFileName } from "@/lib/backup";
 import RevenueGrid from "@/components/RevenueGrid";
@@ -162,6 +163,61 @@ export default function Index() {
     } finally {
       setSyncing(false);
     }
+  }, []);
+
+  // Allow user to configure Supabase at runtime (stores creds in localStorage)
+  const handleConfigureSupabase = useCallback(async () => {
+    try {
+      const url = window.prompt("Supabase URL (ex: https://xyz.supabase.co)");
+      if (!url) return;
+      const key = window.prompt("Supabase publishable (anon) key");
+      if (!key) return;
+      localStorage.setItem("SUPABASE_URL", url);
+      localStorage.setItem("SUPABASE_KEY", key);
+      configureSupabase(url, key);
+      const ready = await initializeSupabase();
+      if (ready) {
+        await migrateLocalToRemote();
+        const status = await checkSupabaseStatus();
+        setSupabaseStatus(status);
+        toast.success("Supabase configuré et synchronisé");
+      } else {
+        toast.error("Impossible d'initialiser Supabase");
+      }
+    } catch (e: any) {
+      toast.error(`Erreur configuration Supabase: ${e?.message || String(e)}`);
+    }
+  }, []);
+
+  // Periodic automatic sync (every 5 minutes) if Supabase configured
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await migrateLocalToRemote();
+        if (res.errors.length > 0) {
+          console.warn("Auto sync errors:", res.errors);
+        }
+      } catch (e) {
+        console.warn("Auto sync failed:", e);
+      }
+    }, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Sync when returning online
+  useEffect(() => {
+    const onOnline = async () => {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const res = await migrateLocalToRemote();
+        if (res.errors.length === 0) toast.success("Sync automatique terminée");
+      } catch (e) {
+        console.warn("Online sync failed:", e);
+      }
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
   }, []);
 
 
@@ -455,6 +511,11 @@ export default function Index() {
                     </span>
                   </div>
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
+                  <Database className="h-4 w-4 mr-2" />
+                  <span>Configurer Supabase</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {backupDirName && (
                   <DropdownMenuItem onSelect={handleClearBackupDir} className="cursor-pointer text-destructive">
                     <Folder className="h-4 w-4 mr-2" />
