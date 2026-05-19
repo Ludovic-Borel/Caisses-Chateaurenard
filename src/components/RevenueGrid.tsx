@@ -214,7 +214,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     >
                       <div className="flex items-center">
                         {readOnly ? (
-                          <span className={`block px-1 py-0.5 text-right w-full ${nr ? "font-bold text-destructive" : ""}`}>
+                          <span className={`block px-1 py-0.5 text-center w-full ${nr ? "font-bold text-destructive" : ""}`}>
                             {fmt(val)}
                           </span>
                         ) : (
@@ -222,7 +222,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                             <input
                               type="text"
                               inputMode="decimal"
-                              className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${nr ? "font-bold text-destructive" : ""}`}
+                              className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${nr ? "font-bold text-destructive" : ""}`}
                               value={editingCell === `${day}-${cat}-${pt}` ? editValue : (val ? fmt(val) : "")}
                               onFocus={() => {
                                 if (!isHoverDisabled) { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }
@@ -304,13 +304,13 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                       >
                         <div className="flex items-center relative">
                           {readOnly ? (
-                            <span className={`block px-1 py-0.5 text-right w-full ${mismatch && !totalsMatch ? "font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
+                            <span className={`block px-1 py-0.5 text-center w-full ${mismatch && !totalsMatch ? "font-bold" : ""}`}>{xVal ? fmt(xVal) : ""}</span>
                           ) : (
                             <>
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                className={`w-full px-1 py-0.5 text-right bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch && !totalsMatch ? "font-bold" : ""}`}
+                                className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch && !totalsMatch ? "font-bold" : ""}`}
                                 value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
                                 onFocus={() => {
                                   if (!isHoverDisabled) { setHoverDay(day); setHoverCol(xKey); }
@@ -342,7 +342,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   })}
                 </>
               ))}
-              <td className="border border-border px-2 py-0.5 text-right font-semibold bg-grid-total">
+              <td className="border border-border px-2 py-0.5 text-center font-semibold bg-grid-total">
                 {fmt(getDayTotal(day))}
               </td>
             </tr>
@@ -356,7 +356,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 {PAYMENT_TYPES.map((pt) => (
                   <td
                     key={`t-${cat}-${pt}`}
-                    className="border border-border px-2 py-1.5 text-right transition-colors duration-150"
+                    className="border border-border px-2 py-1.5 text-center transition-colors duration-150"
                     style={!isHoverDisabled && hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {fmt(getColumnTotal(cat, pt))}
@@ -365,7 +365,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 {extractionMode && PAYMENT_TYPES.map((pt) => (
                   <td
                     key={`t-${cat}-x-${pt}`}
-                    className="border border-border px-2 py-1.5 text-right bg-grid-extract"
+                    className="border border-border px-2 py-1.5 text-center bg-grid-extract"
                     style={!isHoverDisabled && hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}
@@ -373,7 +373,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 ))}
               </>
             ))}
-            <td className="border border-border px-2 py-1.5 text-right">{fmt(getGrandTotal())}</td>
+            <td className="border border-border px-2 py-1.5 text-center">{fmt(getGrandTotal())}</td>
           </tr>
           <tr className="bg-secondary font-semibold text-sm">
             <td className="border border-border px-2 py-2" colSpan={3}>
@@ -382,7 +382,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
             <td className="border border-border px-2 py-2" colSpan={5}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-right" colSpan={(CATEGORIES.length * (extractionMode ? 4 : 2)) - 6}>
+            <td className="border border-border px-2 py-2 text-center" colSpan={(CATEGORIES.length * (extractionMode ? 4 : 2)) - 6}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>
