@@ -598,7 +598,7 @@ export default function Index() {
         </div>
           <div className="flex items-center flex-wrap gap-3">
             {/* Supabase status badge */}
-            {supabaseStatus && (
+            {!extractionMode && supabaseStatus && (
               <div
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer ${
                   supabaseStatus.connected && supabaseStatus.monthsTable && supabaseStatus.driversTable
