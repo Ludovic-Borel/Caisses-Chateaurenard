@@ -73,7 +73,7 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
         </div>
       )}
 
-      <div className="max-h-[55vh] overflow-y-auto">
+      <div className="max-h-[calc(100vh-180px)] overflow-y-auto">
         {drivers.map((driver) => {
           const isDeleted = !activeSet.has(driver);
           return (

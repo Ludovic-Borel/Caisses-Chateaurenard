@@ -685,7 +685,7 @@ export default function Index() {
 
       <main className="px-6 pb-8">
         <div className="flex gap-6">
-          <div className="w-[280px] flex-shrink-0">
+          <div className="w-[190px] flex-shrink-0">
             <DriverList
               drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
               activeDrivers={drivers}
