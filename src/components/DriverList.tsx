@@ -109,7 +109,7 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
             ) : (
               <>
                 <button
-                  className="flex-1 text-left truncate"
+                  className="flex-1 text-left"
                   onClick={() => onSelect(driver)}
                 >
                   {driver}
