@@ -80,7 +80,9 @@ function handleMonthChange(payload: RealtimePostgresChangesPayload<any>): void {
     const callbacks = monthCallbacks.get(key);
     if (callbacks) {
       const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
-      callbacks.forEach((cb) => cb(data as MonthData));
+      const monthData = data as MonthData;
+      setLocalMonth(monthData);
+      callbacks.forEach((cb) => cb(monthData));
     }
   }
 }
@@ -275,9 +277,8 @@ export async function loadMonth(year: number, month: number): Promise<MonthData 
     if (error) {
       if (error.code === "PGRST116") {
         // No rows found - normal, month doesn't exist yet
-        // Clear any stale localStorage entry
-        localStorage.removeItem(monthKey(year, month));
-        return null;
+        // Keep any local fallback data instead of deleting it.
+        return getLocalMonth(year, month);
       }
       throw error;
     }
@@ -375,6 +376,42 @@ export async function migrateLocalToRemote(): Promise<MigrationResult> {
     errors: [],
   };
 
+  // Check remote state before migrating local data.
+  const remoteMonths = new Set<string>();
+  let remoteDriversExists = false;
+
+  try {
+    const { data: monthRows, error: monthRowsErr } = await supabase
+      .from("months")
+      .select("year, month");
+
+    if (!monthRowsErr && Array.isArray(monthRows)) {
+      monthRows.forEach((row: any) => {
+        if (row?.year !== undefined && row?.month !== undefined) {
+          remoteMonths.add(`${row.year}_${row.month}`);
+        }
+      });
+    }
+  } catch {
+    // Ignore and migrate based on local data if remote inspection fails.
+  }
+
+  try {
+    const { data: driverRow, error: driverErr } = await supabase
+      .from("drivers")
+      .select("id")
+      .eq("id", 1)
+      .single();
+
+    if (!driverErr && driverRow) {
+      remoteDriversExists = true;
+    }
+  } catch (e: any) {
+    if (e?.code !== "PGRST116") {
+      console.warn("Failed to inspect remote drivers row:", e?.message || String(e));
+    }
+  }
+
   // Migrate months
   const monthKeys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -387,6 +424,18 @@ export async function migrateLocalToRemote(): Promise<MigrationResult> {
 
   for (const key of monthKeys) {
     try {
+      const keySuffix = key.substring(MONTH_KEY_PREFIX.length);
+      const [yearStr, monthStr] = keySuffix.split("_");
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      if (!Number.isInteger(year) || !Number.isInteger(month)) {
+        continue;
+      }
+
+      if (remoteMonths.has(`${year}_${month}`)) {
+        continue;
+      }
+
       const data: MonthData = JSON.parse(localStorage.getItem(key)!);
       const { error } = await supabase.from("months").upsert(
         { year: data.year, month: data.month, data },
@@ -402,10 +451,10 @@ export async function migrateLocalToRemote(): Promise<MigrationResult> {
     }
   }
 
-  // Migrate drivers
+  // Migrate drivers only if the remote drivers row does not yet exist.
   const localDrivers = getLocalDrivers();
   result.driversCount = localDrivers.length;
-  if (localDrivers.length > 0) {
+  if (!remoteDriversExists && localDrivers.length > 0) {
     try {
       const { error } = await supabase
         .from("drivers")
