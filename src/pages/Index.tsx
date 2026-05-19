@@ -312,36 +312,37 @@ export default function Index() {
 
       const matched: string[] = [];
       const unmatched: { name: string; days: number; total: number }[] = [];
+      const newDrivers = { ...dataRef.current.drivers };
 
-      setData((prev) => {
-        const newDrivers = { ...prev.drivers };
-        for (const [normFull, dayMap] of Object.entries(result.byDriver)) {
-          const parsed = parseFileDriverName(normFull);
-          const candidates = lastNameIndex.get(parsed.lastName);
-          let canonical: string | null = null;
-          if (candidates && candidates.length === 1) {
-            canonical = candidates[0].canonical;
-          } else if (candidates && candidates.length > 1) {
-            const exact = candidates.find((c) => c.initial && parsed.initial && c.initial === parsed.initial);
-            if (exact) canonical = exact.canonical;
-            else {
-              const noInit = candidates.find((c) => !c.initial);
-              if (noInit) canonical = noInit.canonical;
-            }
+      for (const [normFull, dayMap] of Object.entries(result.byDriver)) {
+        const parsed = parseFileDriverName(normFull);
+        const candidates = lastNameIndex.get(parsed.lastName);
+        let canonical: string | null = null;
+        if (candidates && candidates.length === 1) {
+          canonical = candidates[0].canonical;
+        } else if (candidates && candidates.length > 1) {
+          const exact = candidates.find((c) => c.initial && parsed.initial && c.initial === parsed.initial);
+          if (exact) canonical = exact.canonical;
+          else {
+            const noInit = candidates.find((c) => !c.initial);
+            if (noInit) canonical = noInit.canonical;
           }
-          if (!canonical) {
-            let total = 0;
-            const days = Object.keys(dayMap).length;
-            for (const dd of Object.values(dayMap)) for (const v of Object.values(dd)) total += v;
-            unmatched.push({ name: normFull, days, total: Math.round(total * 100) / 100 });
-            continue;
-          }
-          matched.push(canonical);
-          const existing = newDrivers[canonical] || { days: {} };
-          newDrivers[canonical] = { ...existing, extracts: dayMap };
         }
-        return { ...prev, drivers: newDrivers };
-      });
+        if (!canonical) {
+          let total = 0;
+          const days = Object.keys(dayMap).length;
+          for (const dd of Object.values(dayMap)) for (const v of Object.values(dd)) total += v;
+          unmatched.push({ name: normFull, days, total: Math.round(total * 100) / 100 });
+          continue;
+        }
+        matched.push(canonical);
+        const existing = newDrivers[canonical] || { days: {} };
+        newDrivers[canonical] = { ...existing, extracts: dayMap };
+      }
+
+      const updatedMonth = { ...dataRef.current, drivers: newDrivers };
+      setData(updatedMonth);
+      await saveMonth(updatedMonth);
 
       setImportReport({
         matched: matched.length,
@@ -377,7 +378,25 @@ export default function Index() {
         const result = await importWorkbookFile(file);
         const existing = await loadMonth(result.data.year, result.data.month);
         const merged: MonthData = existing
-          ? { ...existing, drivers: { ...existing.drivers, ...result.data.drivers } }
+          ? {
+              ...existing,
+              drivers: {
+                ...existing.drivers,
+                ...Object.fromEntries(
+                  Object.entries(result.data.drivers).map(([driver, importedData]) => {
+                    const existingDriver = existing.drivers[driver] || { days: {} };
+                    return [driver, {
+                      ...existingDriver,
+                      ...importedData,
+                      days: {
+                        ...existingDriver.days,
+                        ...importedData.days,
+                      },
+                    }];
+                  })
+                ),
+              },
+            }
           : result.data;
         await saveMonth(merged);
         result.driversFound.forEach((d) => allNewDrivers.add(d));
