@@ -123,6 +123,36 @@ export default function Dashboard({ currentData, drivers }: Props) {
         </div>
       </div>
 
+      {/* Category breakdown table */}
+      <div className="bg-muted/30 rounded-lg p-4 border border-border">
+        <h3 className="text-sm font-semibold text-primary mb-3">Détail par ligne</h3>
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-grid-header text-grid-header-foreground">
+              <th className="border border-border px-3 py-1.5 text-left">Ligne</th>
+              <th className="border border-border px-3 py-1.5 text-right">Montant</th>
+              <th className="border border-border px-3 py-1.5 text-right">% du CA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {CATEGORIES.map(cat => (
+              <tr key={cat} className="hover:bg-muted/50">
+                <td className="border border-border px-3 py-1 font-medium">{cat}</td>
+                <td className="border border-border px-3 py-1 text-right font-bold">{fmt(stats.catTotals[cat])}</td>
+                <td className="border border-border px-3 py-1 text-right">{pct(stats.catTotals[cat], stats.grandTotal)}%</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-grid-header text-grid-header-foreground font-bold">
+              <td className="border border-border px-3 py-1.5">TOTAL</td>
+              <td className="border border-border px-3 py-1.5 text-right">{fmt(stats.grandTotal)}</td>
+              <td className="border border-border px-3 py-1.5 text-right">100%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
       {/* Top 10 drivers */}
       <div className="bg-muted/30 rounded-lg p-4 border border-border">
         <h3 className="text-sm font-semibold text-primary mb-3">Top 10 chauffeurs</h3>
@@ -161,36 +191,6 @@ export default function Dashboard({ currentData, drivers }: Props) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Category breakdown table */}
-      <div className="bg-muted/30 rounded-lg p-4 border border-border">
-        <h3 className="text-sm font-semibold text-primary mb-3">Détail par ligne</h3>
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="bg-grid-header text-grid-header-foreground">
-              <th className="border border-border px-3 py-1.5 text-left">Ligne</th>
-              <th className="border border-border px-3 py-1.5 text-right">Montant</th>
-              <th className="border border-border px-3 py-1.5 text-right">% du CA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {CATEGORIES.map(cat => (
-              <tr key={cat} className="hover:bg-muted/50">
-                <td className="border border-border px-3 py-1 font-medium">{cat}</td>
-                <td className="border border-border px-3 py-1 text-right font-bold">{fmt(stats.catTotals[cat])}</td>
-                <td className="border border-border px-3 py-1 text-right">{pct(stats.catTotals[cat], stats.grandTotal)}%</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-grid-header text-grid-header-foreground font-bold">
-              <td className="border border-border px-3 py-1.5">TOTAL</td>
-              <td className="border border-border px-3 py-1.5 text-right">{fmt(stats.grandTotal)}</td>
-              <td className="border border-border px-3 py-1.5 text-right">100%</td>
-            </tr>
-          </tfoot>
-        </table>
       </div>
     </div>
   );
