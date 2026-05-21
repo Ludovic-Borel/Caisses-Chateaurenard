@@ -521,12 +521,6 @@ export default function Index() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
-                {/* Supabase */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
-                  <Database className="h-4 w-4 mr-2" />
-                  <span>Configurer Supabase</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {/* Import Excel */}
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); fileInputRef.current?.click(); }} className="cursor-pointer">
                   <Upload className="h-4 w-4 mr-2" />
@@ -581,6 +575,12 @@ export default function Index() {
                     <span>Retirer le modèle</span>
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                {/* Supabase */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
+                  <Database className="h-4 w-4 mr-2" />
+                  <span>Configurer Supabase</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
