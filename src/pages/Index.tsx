@@ -647,9 +647,9 @@ export default function Index() {
                   return;
                 }
                 setExtractionMode(true);
-                // Keep current driver if it's a real driver, otherwise select the first one
-                if (!selectedDriver || selectedDriver === "__dashboard__" || selectedDriver === "__stats__" || selectedDriver === null) {
-                  setSelectedDriver(list[0]);
+                // Keep current driver if it's a real driver, otherwise go back to dashboard
+                if (selectedDriver === "__dashboard__" || selectedDriver === "__stats__" || selectedDriver === null) {
+                  setSelectedDriver("__dashboard__");
                 }
               }}
             >
