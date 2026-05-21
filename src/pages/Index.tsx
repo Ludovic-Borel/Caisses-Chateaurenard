@@ -517,10 +517,27 @@ export default function Index() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="sm" className="text-xs h-8">
-                  <Settings2 className="h-3.5 w-3.5 mr-1" /> Config sauvegarde
+                  <Settings2 className="h-3.5 w-3.5 mr-1" /> Config et Import
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
+                {/* Supabase */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
+                  <Database className="h-4 w-4 mr-2" />
+                  <span>Configurer Supabase</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Import Excel */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); fileInputRef.current?.click(); }} className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  <span>Importer Excel</span>
+                </DropdownMenuItem>
+                {/* Import Extraction */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); extractionFileRef.current?.click(); }} className="cursor-pointer">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  <span>Importer Extraction</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {/* Backup folder */}
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectBackupDir(); }} className="cursor-pointer">
                   <Folder className="h-4 w-4 mr-2" />
@@ -531,11 +548,6 @@ export default function Index() {
                     </span>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
-                  <Database className="h-4 w-4 mr-2" />
-                  <span>Configurer Supabase</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {backupDirName && (
                   <DropdownMenuItem onSelect={handleClearBackupDir} className="cursor-pointer text-destructive">
                     <Folder className="h-4 w-4 mr-2" />
@@ -657,9 +669,6 @@ export default function Index() {
           </Button>
           {extractionMode && (
             <>
-              <Button variant="outline" onClick={() => extractionFileRef.current?.click()}>
-                <FileDown className="h-4 w-4 mr-2" /> Importer Extraction
-              </Button>
               <input
                 ref={extractionFileRef}
                 type="file"
@@ -671,12 +680,6 @@ export default function Index() {
           )}
           {isCurrentMonth && !extractionMode && (
             <>
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" /> Importer Excel
-              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
