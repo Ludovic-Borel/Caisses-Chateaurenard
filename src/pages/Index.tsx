@@ -546,7 +546,6 @@ export default function Index() {
                 >
                   <FileDown className="h-4 w-4 mr-2" />
                   <span>Importer Extraction</span>
-                  {!extractionMode && <span className="text-[10px] text-muted-foreground ml-auto italic">Mode Extraction pour activer</span>}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {/* Backup folder */}
