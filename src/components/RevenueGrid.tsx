@@ -199,14 +199,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 {fmtDate(year, month, day)}
               </td>
               {CATEGORIES.map((cat) => {
-                // Check if entered data exists but no extract data for this day+category
-                const enteredEsp = getValue(day, cat, "especes");
-                const enteredCb = getValue(day, cat, "cb");
-                const extEsp = getExtract(day, cat, "especes");
-                const extCb = getExtract(day, cat, "cb");
-                const hasEntered = enteredEsp > 0 || enteredCb > 0;
-                const hasNoExtract = extEsp <= 0 && extCb <= 0;
-                const isPurple = extractionMode && hasEntered && hasNoExtract;
                 return (
                 <>
                   {PAYMENT_TYPES.map((pt) => {
@@ -214,7 +206,10 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   const nr = isNotReturned(day, cat, pt);
                   const colKey = `${cat}_${pt}`;
                   const isHighlighted = hoverDay === day || hoverCol === colKey;
-                  const bgClass = isPurple
+                  // Check if this specific cell has data but the corresponding extract cell is empty
+                  const extVal = getExtract(day, cat, pt);
+                  const isPurpleCell = extractionMode && val > 0 && extVal <= 0;
+                  const bgClass = isPurpleCell
                     ? "bg-grid-purple"
                     : pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50";
                   return (
