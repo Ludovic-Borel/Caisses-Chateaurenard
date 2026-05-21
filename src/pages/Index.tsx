@@ -532,10 +532,21 @@ export default function Index() {
                   <Upload className="h-4 w-4 mr-2" />
                   <span>Importer Excel</span>
                 </DropdownMenuItem>
-                {/* Import Extraction */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); extractionFileRef.current?.click(); }} className="cursor-pointer">
+                {/* Import Extraction - grisé si mode extraction inactif */}
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    if (!extractionMode) {
+                      toast.error("Activer le mode Extraction pour importer une extraction");
+                      return;
+                    }
+                    extractionFileRef.current?.click();
+                  }}
+                  className={`cursor-pointer ${!extractionMode ? "opacity-40" : ""}`}
+                >
                   <FileDown className="h-4 w-4 mr-2" />
                   <span>Importer Extraction</span>
+                  {!extractionMode && <span className="text-[10px] text-muted-foreground ml-auto italic">Mode Extraction pour activer</span>}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {/* Backup folder */}
