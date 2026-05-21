@@ -223,7 +223,13 @@ export default function RecapGrid({ data, drivers }: Props) {
           <tbody>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
               <tr key={`day-${d}`} className="hover:bg-muted/50 transition-colors">
-                <td className="border border-border px-3 py-1 font-medium text-foreground text-center">{`${String(d).padStart(2,"0")}/${String(data.month+1).padStart(2,"0")}/${data.year}`}</td>
+                <td className="border border-border px-3 py-1 font-medium text-foreground text-center">
+                  {(() => {
+                    const dt = new Date(data.year, data.month, d);
+                    const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+                    return `${days[dt.getDay()]} ${String(d).padStart(2,"0")}/${String(data.month+1).padStart(2,"0")}`;
+                  })()}
+                </td>
                 {CATEGORIES.map((cat) => (
                   <>
                     <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">

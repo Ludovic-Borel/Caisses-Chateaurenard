@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useMemo } from "react";
 import { CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, DriverMonthData, MONTH_NAMES } from "@/lib/types";
 
 interface Props {
@@ -12,8 +12,11 @@ interface Props {
   extractionMode?: boolean;
 }
 
-const fmtDate = (year: number, month: number, day: number) =>
-  `${String(day).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${year}`;
+const fmtDate = (year: number, month: number, day: number) => {
+  const d = new Date(year, month, day);
+  const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+  return `${days[d.getDay()]} ${String(day).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}`;
+};
 
 export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false }: Props) {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
@@ -22,6 +25,69 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   const [editValue, setEditValue] = useState("");
 
   const isHoverDisabled = extractionMode;
+
+  // Build a flat ordered list of cell keys for keyboard navigation
+  const cellKeys = useMemo(() => {
+    const keys: { day: number; cat: string; pt: string; type: "enter" | "extract" }[] = [];
+    const cats = CATEGORIES;
+    const pts = PAYMENT_TYPES;
+    for (let day = 1; day <= daysInMonth; day++) {
+      for (const cat of cats) {
+        for (const pt of pts) {
+          keys.push({ day, cat, pt, type: "enter" });
+        }
+        if (extractionMode) {
+          for (const pt of pts) {
+            keys.push({ day, cat, pt, type: "extract" });
+          }
+        }
+      }
+    }
+    return keys;
+  }, [daysInMonth, extractionMode]);
+
+  const getCellId = (day: number, cat: string, pt: string, type: "enter" | "extract") =>
+    `cell-${day}-${cat}-${pt}-${type}`;
+
+  const focusCell = (day: number, cat: string, pt: string, type: "enter" | "extract") => {
+    const id = getCellId(day, cat, pt, type);
+    const el = document.getElementById(id);
+    if (el) {
+      el.focus();
+      (el as HTMLInputElement).select();
+    }
+  };
+
+  const navigateCell = (currentKey: { day: number; cat: string; pt: string; type: "enter" | "extract" }, direction: "prev" | "next" | "up" | "down") => {
+    const idx = cellKeys.findIndex(
+      (k) => k.day === currentKey.day && k.cat === currentKey.cat && k.pt === currentKey.pt && k.type === currentKey.type
+    );
+    if (idx < 0) return;
+
+    let targetIdx = -1;
+    if (direction === "prev") targetIdx = idx - 1;
+    else if (direction === "next") targetIdx = idx + 1;
+    else if (direction === "up") {
+      for (let i = idx - 1; i >= 0; i--) {
+        if (cellKeys[i].cat === currentKey.cat && cellKeys[i].pt === currentKey.pt && cellKeys[i].type === currentKey.type) {
+          targetIdx = i;
+          break;
+        }
+      }
+    } else if (direction === "down") {
+      for (let i = idx + 1; i < cellKeys.length; i++) {
+        if (cellKeys[i].cat === currentKey.cat && cellKeys[i].pt === currentKey.pt && cellKeys[i].type === currentKey.type) {
+          targetIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (targetIdx >= 0 && targetIdx < cellKeys.length) {
+      const target = cellKeys[targetIdx];
+      focusCell(target.day, target.cat, target.pt, target.type);
+    }
+  };
 
   const getValue = (day: number, cat: string, pt: string): number => {
     return data.days[day]?.[getCellKey(cat as any, pt as any)] || 0;
@@ -76,7 +142,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   );
 
   // Copy exact extraction values to the entered (Esp./CB) cells for a given day + category
-  // Sets both cells to exactly match the extract values (including zeros)
   const copyExtractToEntered = useCallback(
     (day: number, cat: string) => {
       if (!onChange) return;
@@ -130,9 +195,78 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
 
   const hlBg = "hsl(var(--grid-highlight))";
 
+  // Handle keyboard navigation for any cell input
+  const handleKeyNav = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    day: number, cat: string, pt: string, type: "enter" | "extract",
+    commitValue: () => void
+  ) => {
+    const key = { day, cat, pt, type };
+    if (e.key === "Enter") {
+      commitValue();
+      navigateCell(key, "down");
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      commitValue();
+      navigateCell(key, e.shiftKey ? "prev" : "next");
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      commitValue();
+      navigateCell(key, "up");
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      commitValue();
+      navigateCell(key, "down");
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      commitValue();
+      navigateCell(key, "prev");
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      commitValue();
+      navigateCell(key, "next");
+    }
+  };
+
+  // Count extraction days per driver for the "Apply all extracts" button
+  const extractDaysCount = useMemo(() => {
+    if (!data.extracts) return 0;
+    return Object.keys(data.extracts).length;
+  }, [data.extracts]);
+
+  // Apply all extracts to entered data at once
+  const applyAllExtracts = useCallback(() => {
+    if (!onChange || !data.extracts) return;
+    const newDays = { ...data.days };
+    for (const [dayStr, dayExtracts] of Object.entries(data.extracts)) {
+      const day = Number(dayStr);
+      if (!day) continue;
+      const currentDay = { ...(newDays[day] || {}) };
+      for (const [key, val] of Object.entries(dayExtracts)) {
+        currentDay[key] = val;
+      }
+      newDays[day] = currentDay;
+    }
+    onChange({ ...data, days: newDays });
+  }, [data, onChange]);
+
   return (
     <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCol(null); }}>
-      {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
+      {title && (
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-primary">{title}</h2>
+          {extractionMode && extractDaysCount > 0 && (
+            <button
+              type="button"
+              onClick={applyAllExtracts}
+              className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-md hover:opacity-90 transition-opacity"
+              title="Copier toutes les valeurs d'extraction vers la saisie"
+            >
+              Appliquer toutes les extractions
+            </button>
+          )}
+        </div>
+      )}
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
@@ -199,7 +333,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 {fmtDate(year, month, day)}
               </td>
               {CATEGORIES.map((cat) => {
-                // Check if both extracts are empty while entered data exists for this day+category
                 const enteredEsp = getValue(day, cat, "especes");
                 const enteredCb = getValue(day, cat, "cb");
                 const extEsp = getExtract(day, cat, "especes");
@@ -232,6 +365,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                         ) : (
                           <>
                             <input
+                              id={getCellId(day, cat, pt, "enter")}
                               type="text"
                               inputMode="decimal"
                               className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${nr ? "font-bold text-destructive" : ""}`}
@@ -242,14 +376,11 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                 setEditValue(val ? val.toString().replace(".", ",") : "");
                               }}
                               onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                  setValue(day, cat, pt, parsed);
-                                  setEditingCell(null);
-                                  (e.target as HTMLInputElement).blur();
-                                }
-                              }}
+                              onKeyDown={(e) => handleKeyNav(e, day, cat, pt, "enter", () => {
+                                const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                setValue(day, cat, pt, parsed);
+                                setEditingCell(null);
+                              })}
                               onBlur={() => {
                                 if (editingCell === `${day}-${cat}-${pt}`) {
                                   const parsed = parseFloat(editValue.replace(",", ".")) || 0;
@@ -287,7 +418,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const xKey = `${cat}_extract_${pt}`;
                     const isHl = !isHoverDisabled && (hoverDay === day || hoverCol === xKey);
                     const editKey = `${day}-${cat}-extract-${pt}`;
-                    // Check if totals match but individual cells differ (orange case)
                     const otherPt = pt === "especes" ? "cb" : "especes";
                     const enteredOther = getValue(day, cat, otherPt);
                     const xOther = getExtract(day, cat, otherPt);
@@ -296,7 +426,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const totalsMatch = enteredTotal > 0 && xTotal > 0 && Math.abs(enteredTotal - xTotal) <= 0.01;
                     const cellsDiffer = (entered > 0 || enteredOther > 0) && (Math.abs(entered - xVal) > 0.01 || Math.abs(enteredOther - xOther) > 0.01);
                     const isOrange = xVal > 0 && totalsMatch && cellsDiffer;
-                    // Also highlight extraction cells in orange-light when both extracts are empty but entered data exists
                     const extBgHighlight = extractionMode && bothExtractsEmpty && hasEntered;
                     const baseBg = extBgHighlight
                       ? "bg-grid-orange-light"
@@ -324,6 +453,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                           ) : (
                             <>
                               <input
+                                id={getCellId(day, cat, pt, "extract")}
                                 type="text"
                                 inputMode="decimal"
                                 className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch && !totalsMatch ? "font-bold" : ""}`}
@@ -334,14 +464,11 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                   setEditValue(xVal ? xVal.toString().replace(".", ",") : "");
                                 }}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const parsed = parseFloat(editValue.replace(",", ".")) || 0;
-                                    setExtract(day, cat, pt, parsed);
-                                    setEditingCell(null);
-                                    (e.target as HTMLInputElement).blur();
-                                  }
-                                }}
+                                onKeyDown={(e) => handleKeyNav(e, day, cat, pt, "extract", () => {
+                                  const parsed = parseFloat(editValue.replace(",", ".")) || 0;
+                                  setExtract(day, cat, pt, parsed);
+                                  setEditingCell(null);
+                                })}
                                 onBlur={() => {
                                   if (editingCell === editKey) {
                                     const parsed = parseFloat(editValue.replace(",", ".")) || 0;

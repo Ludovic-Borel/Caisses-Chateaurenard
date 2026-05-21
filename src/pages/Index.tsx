@@ -11,6 +11,7 @@ import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
+import YearlyOverview from "@/components/YearlyOverview";
 import ImportReportDialog from "@/components/ImportReportDialog";
 import BackupSaveDialog from "@/components/BackupSaveDialog";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -34,6 +35,7 @@ export default function Index() {
   const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [extractionMode, setExtractionMode] = useState(false);
   const [importReport, setImportReport] = useState<{
     matched: number;
@@ -48,8 +50,11 @@ export default function Index() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [supabaseStatus, setSupabaseStatus] = useState<SupabaseStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   const driversRef = useRef(drivers);
 
@@ -125,16 +130,28 @@ export default function Index() {
   useEffect(() => {
     dataRef.current = data;
     if (skipNextSave.current) { skipNextSave.current = false; return; }
-    const t = setTimeout(() => { saveMonth(data); }, 500);
-    return () => clearTimeout(t);
+    setSaveStatus("saving");
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveMonth(data);
+      setSaveStatus("saved");
+      saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+    }, 500);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [data]);
 
   // Debounced save of drivers
   useEffect(() => {
     driversRef.current = drivers;
     if (skipNextDriversSave.current) { skipNextDriversSave.current = false; return; }
-    const t = setTimeout(() => { saveDrivers(drivers); }, 500);
-    return () => clearTimeout(t);
+    setSaveStatus("saving");
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveDrivers(drivers);
+      setSaveStatus("saved");
+      saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+    }, 500);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [drivers]);
 
   // ---------- Sync handler ----------
@@ -593,6 +610,18 @@ export default function Index() {
             >
               <FileArchive className="h-3.5 w-3.5 mr-1" /> Sauvegarder
             </Button>
+
+            {/* Save status indicator */}
+            {saveStatus === "saving" && (
+              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
+              </span>
+            )}
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-green-300">
+                <CheckCircle2 className="h-3 w-3" /> Enregistré
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -705,13 +734,14 @@ export default function Index() {
 
       <main className="px-6 pb-8">
         <div className="flex gap-6">
+          {sidebarOpen && (
           <div className="w-[220px] flex-shrink-0">
             <DriverList
               drivers={Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort()}
               activeDrivers={drivers}
               selectedDriver={selectedDriver}
               onSelect={(d) => {
-                if (d === "__stats__" || d === "__dashboard__" || d === null) setExtractionMode(false);
+                if (d === "__stats__" || d === "__dashboard__" || d === "__yearly__" || d === null) setExtractionMode(false);
                 setSelectedDriver(d);
               }}
               onAddDriver={handleAddDriver}
@@ -719,10 +749,24 @@ export default function Index() {
               onRenameDriver={handleRenameDriver}
             />
           </div>
-
+          )}
           <div className="flex-1 min-w-0">
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-              {selectedDriver === "__stats__" ? (
+              <div className="flex items-center justify-end mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  title={sidebarOpen ? "Masquer la liste des chauffeurs" : "Afficher la liste des chauffeurs"}
+                >
+                  {sidebarOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
+                  <span className="ml-1">{sidebarOpen ? "Masquer" : "Chauffeurs"}</span>
+                </Button>
+              </div>
+              {selectedDriver === "__yearly__" ? (
+                <YearlyOverview year={data.year} drivers={drivers} />
+              ) : selectedDriver === "__stats__" ? (
                 <StatsPanel currentData={data} drivers={drivers} />
               ) : selectedDriver === "__dashboard__" ? (
                 <Dashboard currentData={data} drivers={drivers} />
@@ -754,6 +798,12 @@ export default function Index() {
         data={data}
         onSave={handleSaveToXlsm}
       />
+      <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20">
+        Caisses Chateaurenard v1.0 •
+        <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
+          GitHub
+        </a>
+      </footer>
     </div>
   );
 }

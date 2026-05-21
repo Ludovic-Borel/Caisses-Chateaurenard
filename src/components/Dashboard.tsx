@@ -46,7 +46,7 @@ export default function Dashboard({ currentData, drivers }: Props) {
       if (dEsp + dCB > 0) driverTotals.push({ name: driver, total: dEsp + dCB, notReturned: dNR });
     });
 
-    driverTotals.sort((a, b) => b.total - a.total);
+    driverTotals.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
     const activeDays = dayTotals.filter(v => v > 0);
     const bestDayIdx = dayTotals.indexOf(Math.max(...dayTotals));
     const worstActiveDay = activeDays.length > 0 ? Math.min(...activeDays) : 0;
