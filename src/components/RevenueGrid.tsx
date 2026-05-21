@@ -228,45 +228,9 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
     }
   };
 
-  // Count extraction days per driver for the "Apply all extracts" button
-  const extractDaysCount = useMemo(() => {
-    if (!data.extracts) return 0;
-    return Object.keys(data.extracts).length;
-  }, [data.extracts]);
-
-  // Apply all extracts to entered data at once
-  const applyAllExtracts = useCallback(() => {
-    if (!onChange || !data.extracts) return;
-    const newDays = { ...data.days };
-    for (const [dayStr, dayExtracts] of Object.entries(data.extracts)) {
-      const day = Number(dayStr);
-      if (!day) continue;
-      const currentDay = { ...(newDays[day] || {}) };
-      for (const [key, val] of Object.entries(dayExtracts)) {
-        currentDay[key] = val;
-      }
-      newDays[day] = currentDay;
-    }
-    onChange({ ...data, days: newDays });
-  }, [data, onChange]);
-
   return (
     <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCol(null); }}>
-      {title && (
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-primary">{title}</h2>
-          {extractionMode && extractDaysCount > 0 && (
-            <button
-              type="button"
-              onClick={applyAllExtracts}
-              className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-md hover:opacity-90 transition-opacity"
-              title="Copier toutes les valeurs d'extraction vers la saisie"
-            >
-              Appliquer toutes les extractions
-            </button>
-          )}
-        </div>
-      )}
+      {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
       <table className="w-full text-xs border-collapse min-w-[900px]">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
