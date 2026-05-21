@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -640,6 +640,12 @@ export default function Index() {
             onClick={() => { setExtractionMode(false); setSelectedDriver(null); }}
           >
             <TableProperties className="h-4 w-4 mr-2" /> Récap global
+          </Button>
+          <Button
+            variant={selectedDriver === "__yearly__" ? "default" : "outline"}
+            onClick={() => { setExtractionMode(false); setSelectedDriver("__yearly__"); }}
+          >
+            <BarChart3 className="h-4 w-4 mr-2" /> Annuel
           </Button>
           {loading && (
             <span className="text-sm text-muted-foreground flex items-center gap-2">
