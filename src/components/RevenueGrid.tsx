@@ -296,7 +296,11 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const totalsMatch = enteredTotal > 0 && xTotal > 0 && Math.abs(enteredTotal - xTotal) <= 0.01;
                     const cellsDiffer = (entered > 0 || enteredOther > 0) && (Math.abs(entered - xVal) > 0.01 || Math.abs(enteredOther - xOther) > 0.01);
                     const isOrange = xVal > 0 && totalsMatch && cellsDiffer;
-                    const baseBg = isOrange ? "bg-grid-orange" : mismatch ? "bg-grid-mismatch" : match ? "bg-grid-match" : "bg-grid-extract";
+                    // Also highlight extraction cells in orange-light when both extracts are empty but entered data exists
+                    const extBgHighlight = extractionMode && bothExtractsEmpty && hasEntered;
+                    const baseBg = extBgHighlight
+                      ? "bg-grid-orange-light"
+                      : isOrange ? "bg-grid-orange" : mismatch ? "bg-grid-mismatch" : match ? "bg-grid-match" : "bg-grid-extract";
                     const title = missingEntered
                       ? `Extraction présente (${fmt(xVal)}) mais aucune saisie ${pt === "especes" ? "Esp." : "CB"} en face`
                       : isOrange
