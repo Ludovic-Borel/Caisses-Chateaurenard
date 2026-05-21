@@ -198,17 +198,29 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
               >
                 {fmtDate(year, month, day)}
               </td>
-              {CATEGORIES.map((cat) => (
+              {CATEGORIES.map((cat) => {
+                // Check if entered data exists but no extract data for this day+category
+                const enteredEsp = getValue(day, cat, "especes");
+                const enteredCb = getValue(day, cat, "cb");
+                const extEsp = getExtract(day, cat, "especes");
+                const extCb = getExtract(day, cat, "cb");
+                const hasEntered = enteredEsp > 0 || enteredCb > 0;
+                const hasNoExtract = extEsp <= 0 && extCb <= 0;
+                const isPurple = extractionMode && hasEntered && hasNoExtract;
+                return (
                 <>
                   {PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
                   const colKey = `${cat}_${pt}`;
                   const isHighlighted = hoverDay === day || hoverCol === colKey;
+                  const bgClass = isPurple
+                    ? "bg-grid-purple"
+                    : pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50";
                   return (
                     <td
                       key={`${day}-${cat}-${pt}`}
-                      className={`border border-border px-0 py-0 transition-colors duration-150 ${pt === "especes" ? "bg-grid-especes/50" : "bg-grid-cb/50"}`}
+                      className={`border border-border px-0 py-0 transition-colors duration-150 ${bgClass}`}
                       style={!isHoverDisabled && isHighlighted ? { backgroundColor: hlBg } : undefined}
                       onMouseEnter={() => { if (!isHoverDisabled) { setHoverDay(day); setHoverCol(colKey); } }}
                     >
@@ -341,7 +353,8 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     );
                   })}
                 </>
-              ))}
+                );
+              })}
               <td className="border border-border px-2 py-0.5 text-center font-semibold bg-grid-total">
                 {fmt(getDayTotal(day))}
               </td>
