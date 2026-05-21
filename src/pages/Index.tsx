@@ -639,7 +639,6 @@ export default function Index() {
               onClick={() => {
                 if (extractionMode) {
                   setExtractionMode(false);
-                  setSelectedDriver("__dashboard__");
                   return;
                 }
                 const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
@@ -648,7 +647,10 @@ export default function Index() {
                   return;
                 }
                 setExtractionMode(true);
-                setSelectedDriver(list[0]);
+                // Keep current driver if it's a real driver, otherwise select the first one
+                if (!selectedDriver || selectedDriver === "__dashboard__" || selectedDriver === "__stats__" || selectedDriver === null) {
+                  setSelectedDriver(list[0]);
+                }
               }}
             >
             <ScanLine className="h-4 w-4 mr-2" /> Extraction
