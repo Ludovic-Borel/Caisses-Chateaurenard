@@ -12,6 +12,7 @@ import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
 import Dashboard from "@/components/Dashboard";
 import YearlyOverview from "@/components/YearlyOverview";
+import MonthComparison from "@/components/MonthComparison";
 import ImportReportDialog from "@/components/ImportReportDialog";
 import BackupSaveDialog from "@/components/BackupSaveDialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3 } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -647,6 +648,12 @@ export default function Index() {
           >
             <BarChart3 className="h-4 w-4 mr-2" /> Annuel
           </Button>
+          <Button
+            variant={selectedDriver === "__comparison__" ? "default" : "outline"}
+            onClick={() => { setExtractionMode(false); setSelectedDriver("__comparison__"); }}
+          >
+            <GitCompare className="h-4 w-4 mr-2" /> Comparer
+          </Button>
           {loading && (
             <span className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
@@ -747,7 +754,7 @@ export default function Index() {
               activeDrivers={drivers}
               selectedDriver={selectedDriver}
               onSelect={(d) => {
-                if (d === "__stats__" || d === "__dashboard__" || d === "__yearly__" || d === null) setExtractionMode(false);
+                if (d === "__stats__" || d === "__dashboard__" || d === "__yearly__" || d === "__comparison__" || d === null) setExtractionMode(false);
                 setSelectedDriver(d);
               }}
               onAddDriver={handleAddDriver}
@@ -770,7 +777,9 @@ export default function Index() {
                   <span className="ml-1">{sidebarOpen ? "Masquer" : "Chauffeurs"}</span>
                 </Button>
               </div>
-              {selectedDriver === "__yearly__" ? (
+              {selectedDriver === "__comparison__" ? (
+                <MonthComparison drivers={drivers} />
+              ) : selectedDriver === "__yearly__" ? (
                 <YearlyOverview year={data.year} drivers={drivers} />
               ) : selectedDriver === "__stats__" ? (
                 <StatsPanel currentData={data} drivers={drivers} />
