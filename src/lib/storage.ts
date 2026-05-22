@@ -4,6 +4,7 @@ import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 const MONTH_KEY_PREFIX = "recettes_month_";
 const DRIVERS_KEY = "recettes_drivers";
+const DRIVER_MAPPING_KEY = "recettes_driver_mappings";
 
 // ---------- Real-time callback types ----------
 type MonthCallback = (data: MonthData) => void;
@@ -132,6 +133,34 @@ export function onDriversChange(callback: DriversCallback): () => void {
   return () => {
     driversCallbacks.delete(callback);
   };
+}
+
+// ---------- Driver name mappings (for manual mapping during extract import) ----------
+export type DriverMapping = Record<string, string>; // fileDriverName -> appDriverName
+
+export function loadDriverMappings(): DriverMapping {
+  try {
+    const raw = localStorage.getItem(DRIVER_MAPPING_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveDriverMapping(fileName: string, appName: string): void {
+  const m = loadDriverMappings();
+  m[fileName] = appName;
+  localStorage.setItem(DRIVER_MAPPING_KEY, JSON.stringify(m));
+}
+
+export function removeDriverMapping(fileName: string): void {
+  const m = loadDriverMappings();
+  delete m[fileName];
+  localStorage.setItem(DRIVER_MAPPING_KEY, JSON.stringify(m));
+}
+
+export function clearDriverMappings(): void {
+  localStorage.removeItem(DRIVER_MAPPING_KEY);
 }
 
 // ---------- Conflict detection ----------
