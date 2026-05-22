@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -52,9 +52,22 @@ export default function Index() {
   const [supabaseStatus, setSupabaseStatus] = useState<SupabaseStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
+  const [undoState, setUndoState] = useState<{ data: MonthData; drivers: string[] } | null>(null);
 
   const handlePrint = useCallback(() => {
     window.print();
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (!undoState) return;
+    setData(undoState.data);
+    setDrivers(undoState.drivers);
+    setUndoState(null);
+    toast.success("Import annulé, état précédent restauré");
+  }, [undoState]);
+
+  const saveSnapshot = useCallback(() => {
+    setUndoState({ data: JSON.parse(JSON.stringify(dataRef.current)), drivers: [...driversRef.current] });
   }, []);
 
   const skipNextSave = useRef(true);
@@ -311,6 +324,7 @@ export default function Index() {
     if (!files || files.length === 0) return;
     const file = files[0];
     setLoading(true);
+    saveSnapshot();
     try {
       const result = await importExtractionFile(file);
       if (result.year !== dataRef.current.year || result.month !== dataRef.current.month) {
@@ -392,6 +406,7 @@ export default function Index() {
   const handleImportFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setLoading(true);
+    saveSnapshot();
     let successCount = 0;
     let lastImported: { year: number; month: number } | null = null;
     const allNewDrivers = new Set<string>();
@@ -607,6 +622,17 @@ export default function Index() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {undoState && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="text-xs h-8 no-print"
+                onClick={handleUndo}
+                title="Annuler le dernier import et restaurer l'état précédent"
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Annuler
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"
