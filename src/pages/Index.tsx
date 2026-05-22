@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -52,6 +52,11 @@ export default function Index() {
   const [supabaseStatus, setSupabaseStatus] = useState<SupabaseStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
+
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -605,7 +610,16 @@ export default function Index() {
             <Button
               variant="secondary"
               size="sm"
-              className="text-xs h-8"
+              className="text-xs h-8 no-print hidden md:inline-flex"
+              onClick={handlePrint}
+              title="Exporter en PDF (impression navigateur)"
+            >
+              <Printer className="h-3.5 w-3.5 mr-1" /> PDF
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="text-xs h-8 no-print"
               onClick={() => setShowSaveDialog(true)}
               title="Sauvegarder le mois au format .xlsm"
             >
@@ -745,7 +759,7 @@ export default function Index() {
         </div>
       </div>
 
-      <main className="px-6 pb-8">
+      <main className="px-6 pb-8 print-content">
         <div className="flex gap-6">
           {sidebarOpen && (
           <div className="w-[220px] flex-shrink-0">
@@ -813,7 +827,7 @@ export default function Index() {
         data={data}
         onSave={handleSaveToXlsm}
       />
-      <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20">
+      <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20 no-print">
         Caisses Chateaurenard v1.0 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
           GitHub
