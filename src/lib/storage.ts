@@ -134,6 +134,27 @@ export function onDriversChange(callback: DriversCallback): () => void {
   };
 }
 
+// ---------- Conflict detection ----------
+
+/** Timestamp key for a given month */
+function monthTsKey(year: number, month: number): string {
+  return `${MONTH_KEY_PREFIX}${year}_${month}_ts`;
+}
+
+/** Check if local data is newer than server data for a given month */
+export function checkLocalNewerThanServer(year: number, month: number): boolean {
+  const localTs = Number(localStorage.getItem(monthTsKey(year, month)) || "0");
+  if (!localTs) return false;
+  const serverTsKey = `recettes_server_ts_${year}_${month}`;
+  const serverTs = Number(localStorage.getItem(serverTsKey) || "0");
+  return localTs > serverTs;
+}
+
+/** Mark server timestamp after loading from server */
+export function markServerLoaded(year: number, month: number): void {
+  localStorage.setItem(`recettes_server_ts_${year}_${month}`, String(Date.now()));
+}
+
 // ---------- Local helpers ----------
 function monthKey(year: number, month: number): string {
   return `${MONTH_KEY_PREFIX}${year}_${month}`;
@@ -142,6 +163,8 @@ function monthKey(year: number, month: number): string {
 // ---------- LocalStorage fallback helpers ----------
 function setLocalMonth(data: MonthData): void {
   localStorage.setItem(monthKey(data.year, data.month), JSON.stringify(data));
+  // Update local timestamp
+  localStorage.setItem(monthTsKey(data.year, data.month), String(Date.now()));
 }
 
 function getLocalMonth(year: number, month: number): MonthData | null {
@@ -285,8 +308,21 @@ export async function loadMonth(year: number, month: number): Promise<MonthData 
 
     if (data?.data) {
       const monthData = data.data as MonthData;
+      // Check for conflict: local data might be newer
+      const localNewer = checkLocalNewerThanServer(year, month);
+      if (localNewer) {
+        const localData = getLocalMonth(year, month);
+        if (localData) {
+          // Keep local data and try to push it back to server
+          console.log(`[Supabase] Conflict detected for ${year}-${month}: local data is newer. Keeping local.`);
+          // Don't overwrite local with server data
+          markServerLoaded(year, month);
+          return localData;
+        }
+      }
       // Overwrite localStorage with server data (force sync)
       setLocalMonth(monthData);
+      markServerLoaded(year, month);
       return monthData;
     }
 
