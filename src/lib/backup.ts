@@ -296,6 +296,60 @@ export async function updateExistingBackup(
   return true;
 }
 
+// ---------- Helper to add a "Recap" sheet compatible with importWorkbookFile ----------
+/**
+ * Adds a "Recap" sheet to the workbook in the exact format that importWorkbookFile() expects.
+ * This allows backup files to be reimported into the app if needed.
+ * Format:
+ *   Row 0: driver names positioned at their block start columns
+ *   Row 1: headers alternating category name / "CB"
+ *   Rows 2+: day numbers in col A, then data in driver blocks
+ */
+function addRecapSheet(wb: XLSX.WorkBook, data: MonthData, drivers: string[]): void {
+  const daysInMonth = getDaysInMonth(data.year, data.month);
+  const colsPerDriver = CATEGORIES.length * 2; // Esp. + CB per category
+
+  // Build rows properly
+  const driverRow: (string | null)[] = [null]; // col A = day number, no driver name there
+  const headerRow: (string | null)[] = [null];
+  let col = 1; // 0 = day number column
+  drivers.forEach((driver) => {
+    driverRow[col] = driver;
+    CATEGORIES.forEach((cat, cIdx) => {
+      headerRow[col + cIdx * 2] = cat;
+      headerRow[col + cIdx * 2 + 1] = "CB";
+    });
+    col += colsPerDriver;
+    // Fill nulls up to the next driver start
+    while (driverRow.length < col) driverRow.push(null);
+    while (headerRow.length < col) headerRow.push(null);
+  });
+
+  const rows: (string | number | null)[][] = [driverRow, headerRow];
+
+  // Data rows
+  for (let day = 1; day <= daysInMonth; day++) {
+    const row: (string | number | null)[] = [day];
+    drivers.forEach((driver) => {
+      const dd = data.drivers[driver];
+      CATEGORIES.forEach((cat) => {
+        const e = dd?.days[day]?.[getCellKey(cat, "especes")] || 0;
+        const c = dd?.days[day]?.[getCellKey(cat, "cb")] || 0;
+        row.push(e || null);
+        row.push(c || null);
+      });
+    });
+    rows.push(row);
+  }
+
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+
+  // Set column widths for readability
+  sheet["!cols"] = [{ wch: 4 }, ...drivers.map(() => [{ wch: 10 }, { wch: 10 }]).flat()];
+
+  XLSX.utils.book_append_sheet(wb, sheet, "Recap");
+}
+
 // ---------- Old save backup (kept for backward compatibility) ----------
 export async function saveBackup(data: MonthData, drivers: string[]): Promise<boolean> {
   const dir = await getBackupDir();
@@ -325,6 +379,9 @@ export async function saveBackup(data: MonthData, drivers: string[]): Promise<bo
         }
       });
 
+      // Also add a "Recap" sheet for reimport compatibility
+      addRecapSheet(templateWb, data, drivers);
+
       const outBuf = XLSX.write(templateWb, { bookType: "xlsx", type: "array" });
 
       const fileHandle = await dir.handle.getFileHandle(fileName, { create: true });
@@ -339,6 +396,8 @@ export async function saveBackup(data: MonthData, drivers: string[]): Promise<bo
 
   try {
     const wb = buildWorkbook(data, drivers);
+    // Add a "Recap" sheet for reimport compatibility
+    addRecapSheet(wb, data, drivers);
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const fileHandle = await dir.handle.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();

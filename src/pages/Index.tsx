@@ -4,7 +4,7 @@ import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, mig
 import { initializeSupabase } from "@/lib/setup";
 import { configureSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
-import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, saveNewBackup, updateExistingBackup, getSaveFileName } from "@/lib/backup";
+import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup } from "@/lib/backup";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
@@ -14,7 +14,6 @@ import Dashboard from "@/components/Dashboard";
 import YearlyOverview from "@/components/YearlyOverview";
 import MonthComparison from "@/components/MonthComparison";
 import ImportReportDialog from "@/components/ImportReportDialog";
-import BackupSaveDialog from "@/components/BackupSaveDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, FileArchive, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -48,10 +47,10 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [backupDirName, setBackupDirName] = useState<string | null>(getBackupDirName());
   const [templateFileName, setTemplateFileName] = useState<string | null>(getTemplateFileName());
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [supabaseStatus, setSupabaseStatus] = useState<SupabaseStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
+  const [excelBackupStatus, setExcelBackupStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [undoState, setUndoState] = useState<{ data: MonthData; drivers: string[] } | null>(null);
 
   const handlePrint = useCallback(() => {
@@ -74,8 +73,10 @@ export default function Index() {
   const skipNextDriversSave = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const excelBackupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   const driversRef = useRef(drivers);
+  const lastExcelSaveRef = useRef<string>("");
 
   // Initial load + Supabase init + migration + realtime
   useEffect(() => {
@@ -172,6 +173,38 @@ export default function Index() {
     }, 500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [drivers]);
+
+  // ---------- Auto-save Excel backup ----------
+  useEffect(() => {
+    // Skip initial load
+    if (skipNextSave.current) return;
+    // Only save if a backup directory is configured
+    if (!backupDirName) return;
+
+    const serialized = JSON.stringify({ data, drivers });
+    if (serialized === lastExcelSaveRef.current) return;
+    lastExcelSaveRef.current = serialized;
+
+    if (excelBackupTimeoutRef.current) clearTimeout(excelBackupTimeoutRef.current);
+    excelBackupTimeoutRef.current = setTimeout(async () => {
+      setExcelBackupStatus("saving");
+      try {
+        const saved = await saveBackup(data, drivers);
+        if (saved) {
+          setExcelBackupStatus("saved");
+          setTimeout(() => setExcelBackupStatus("idle"), 3000);
+        } else {
+          setExcelBackupStatus("idle");
+        }
+      } catch (e) {
+        console.warn("Excel backup failed:", e);
+        setExcelBackupStatus("idle");
+      }
+    }, 5000);
+    return () => {
+      if (excelBackupTimeoutRef.current) clearTimeout(excelBackupTimeoutRef.current);
+    };
+  }, [data, drivers, backupDirName]);
 
   // ---------- Sync handler ----------
   const handleSyncToSupabase = useCallback(async () => {
@@ -500,45 +533,6 @@ export default function Index() {
     toast.success("Fichier modèle retiré");
   }, []);
 
-  const handleSaveBackup = useCallback(async () => {
-    if (!backupDirName) {
-      setShowSaveDialog(true);
-      return;
-    }
-    setLoading(true);
-    try {
-      const saved = await saveBackup(data, drivers);
-      if (saved) {
-        toast.success(`Sauvegarde effectuée : ${MONTH_NAMES[data.month]} ${data.year}`);
-      } else {
-        toast.error("Aucun dossier de sauvegarde sélectionné. Cliquez d'abord sur ⚙ Config sauvegarde.");
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      toast.error(`Erreur sauvegarde : ${msg}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [data, drivers, backupDirName]);
-
-  const handleSaveToXlsm = useCallback(async (mode: "new" | "update", file?: File) => {
-    if (mode === "new") {
-      const saved = await saveNewBackup(data, drivers);
-      if (saved) {
-        toast.success(`Sauvegarde créée : ${getSaveFileName(data)}`);
-      } else {
-        toast.error("Sauvegarde annulée");
-      }
-    } else {
-      const saved = await updateExistingBackup(data, drivers, file);
-      if (saved) {
-        toast.success(`Fichier mis à jour : ${file?.name || getSaveFileName(data)}`);
-      } else {
-        toast.error("Mise à jour annulée");
-      }
-    }
-  }, [data, drivers]);
-
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
@@ -642,17 +636,8 @@ export default function Index() {
             >
               <Printer className="h-3.5 w-3.5 mr-1" /> PDF
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="text-xs h-8 no-print"
-              onClick={() => setShowSaveDialog(true)}
-              title="Sauvegarder le mois au format .xlsm"
-            >
-              <FileArchive className="h-3.5 w-3.5 mr-1" /> Sauvegarder
-            </Button>
 
-            {/* Save status indicator */}
+            {/* Save status indicators */}
             {saveStatus === "saving" && (
               <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
                 <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
@@ -661,6 +646,16 @@ export default function Index() {
             {saveStatus === "saved" && (
               <span className="flex items-center gap-1 text-xs text-green-300">
                 <CheckCircle2 className="h-3 w-3" /> Enregistré
+              </span>
+            )}
+            {backupDirName && excelBackupStatus === "saving" && (
+              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" /> Excel...
+              </span>
+            )}
+            {backupDirName && excelBackupStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-green-300">
+                <CheckCircle2 className="h-3 w-3" /> Excel OK
               </span>
             )}
           </div>
@@ -847,12 +842,6 @@ export default function Index() {
       </main>
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
-      <BackupSaveDialog
-        open={showSaveDialog}
-        onOpenChange={setShowSaveDialog}
-        data={data}
-        onSave={handleSaveToXlsm}
-      />
       <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20 no-print">
         Caisses Chateaurenard v1.0 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
