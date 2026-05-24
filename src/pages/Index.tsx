@@ -71,7 +71,8 @@ export default function Index() {
 
   const skipNextSave = useRef(true);
   const skipNextDriversSave = useRef(true);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDataTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDriversTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const excelBackupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
@@ -151,13 +152,13 @@ export default function Index() {
     dataRef.current = data;
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     setSaveStatus("saving");
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
+    if (saveDataTimeoutRef.current) clearTimeout(saveDataTimeoutRef.current);
+    saveDataTimeoutRef.current = setTimeout(async () => {
       await saveMonth(data);
       setSaveStatus("saved");
       saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
+    return () => { if (saveDataTimeoutRef.current) clearTimeout(saveDataTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [data]);
 
   // Debounced save of drivers
@@ -165,13 +166,13 @@ export default function Index() {
     driversRef.current = drivers;
     if (skipNextDriversSave.current) { skipNextDriversSave.current = false; return; }
     setSaveStatus("saving");
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
+    if (saveDriversTimeoutRef.current) clearTimeout(saveDriversTimeoutRef.current);
+    saveDriversTimeoutRef.current = setTimeout(async () => {
       await saveDrivers(drivers);
       setSaveStatus("saved");
       saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
+    return () => { if (saveDriversTimeoutRef.current) clearTimeout(saveDriversTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [drivers]);
 
   // ---------- Auto-save Excel backup ----------
