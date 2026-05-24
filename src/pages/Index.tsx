@@ -176,9 +176,15 @@ export default function Index() {
   }, [drivers]);
 
   // ---------- Auto-save Excel backup ----------
+  const skipFirstExcel = useRef(true);
   useEffect(() => {
     // Skip initial load
-    if (skipNextSave.current) return;
+    if (skipFirstExcel.current) {
+      skipFirstExcel.current = false;
+      // Don't save on initial mount but still serialize for future comparison
+      lastExcelSaveRef.current = JSON.stringify({ data, drivers });
+      return;
+    }
     // Only save if a backup directory is configured
     if (!backupDirName) return;
 
