@@ -350,7 +350,7 @@ function addRecapSheet(wb: XLSX.WorkBook, data: MonthData, drivers: string[]): v
   XLSX.utils.book_append_sheet(wb, sheet, "Recap");
 }
 
-// ---------- Old save backup (kept for backward compatibility) ----------
+// ---------- Save backup (auto-save to configured directory) ----------
 export async function saveBackup(data: MonthData, drivers: string[]): Promise<boolean> {
   const dir = await getBackupDir();
   if (!dir) return false;
@@ -362,28 +362,18 @@ export async function saveBackup(data: MonthData, drivers: string[]): Promise<bo
 
   if (template) {
     try {
+      // Load template with ExcelJS to preserve all formatting, macros, formulas, etc.
       const file = await template.handle.getFile();
       const buf = await file.arrayBuffer();
-      const templateWb = XLSX.read(buf, { type: "array" });
-      const dataWb = buildWorkbook(data, drivers);
+      const wb = await new ExcelJS.Workbook().xlsx.load(buf);
 
-      dataWb.SheetNames.forEach((name) => {
-        const sheet = dataWb.Sheets[name];
-        if (templateWb.SheetNames.includes(name)) {
-          const idx = templateWb.SheetNames.indexOf(name);
-          templateWb.SheetNames[idx] = name;
-          templateWb.Sheets[name] = sheet;
-        } else {
-          templateWb.SheetNames.push(name);
-          templateWb.Sheets[name] = sheet;
-        }
-      });
+      // Fill the Recap sheet with data (preserves everything else)
+      await fillRecapSheet(wb, data, drivers);
 
-      // Also add a "Recap" sheet for reimport compatibility
-      addRecapSheet(templateWb, data, drivers);
+      // Write the workbook back to a buffer
+      const outBuf = await wb.xlsx.writeBuffer();
 
-      const outBuf = XLSX.write(templateWb, { bookType: "xlsx", type: "array" });
-
+      // Save to the backup directory
       const fileHandle = await dir.handle.getFileHandle(fileName, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(new Uint8Array(outBuf));
