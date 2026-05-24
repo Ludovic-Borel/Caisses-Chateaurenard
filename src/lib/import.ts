@@ -296,7 +296,7 @@ function dateParts(y: number, m: number, d: number): DateParts | null {
   return { y, m, d };
 }
 
-function parseDateText(s: string, expectedMonth?: number): DateParts | null {
+export function parseDateText(s: string, expectedMonth?: number): DateParts | null {
   const trimmed = s.trim();
   const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (iso) return dateParts(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
@@ -342,6 +342,149 @@ function parseRowDate(v: unknown, expectedMonth?: number): DateParts | null {
     return parseDateText(v, expectedMonth);
   }
   return null;
+}
+
+/** Import extraction from a Uint8Array buffer (bypasses File.arrayBuffer() for testing in jsdom) */
+export async function importExtractionFromBuffer(
+  buffer: Uint8Array,
+  fileName?: string
+): Promise<ExtractionImportResult> {
+  // Copy the Uint8Array into a proper ArrayBuffer of the correct length
+  const ab = new ArrayBuffer(buffer.length);
+  const view = new Uint8Array(ab);
+  view.set(buffer);
+  const wb = XLSX.read(ab, { type: "array", cellDates: false, cellText: true });
+  return importExtractionFromWorkbook(wb, fileName || "extraction.xlsx");
+}
+
+/** Core extraction import logic from a workbook (used by both file and buffer imports) */
+async function importExtractionFromWorkbook(
+  wb: XLSX.WorkBook,
+  fileName: string
+): Promise<ExtractionImportResult> {
+  if (wb.SheetNames.length === 0) throw new Error("Fichier vide");
+
+  type Row = {
+    sheet: string;
+    rowNum: number;
+    date: unknown;
+    conducteur: unknown;
+    ligne: unknown;
+    prix: unknown;
+    paiement: unknown;
+    annulee: unknown;
+  };
+  const rows: Row[] = [];
+  const getCellValue = (sheet: XLSX.WorkSheet, rowIdx: number, colIdx: number): DateCellValue => {
+    const ref = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+    const cell = sheet[ref] as XLSX.CellObject | undefined;
+    return { raw: cell?.v ?? null, text: cell?.w ?? null };
+  };
+
+  for (const sheetName of wb.SheetNames) {
+    const sheet = wb.Sheets[sheetName];
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: null, raw: true });
+    const headerIdx = aoa.findIndex((r) =>
+      Array.isArray(r) && r.some((c) => typeof c === "string" && /conducteur/i.test(c))
+    );
+    if (headerIdx < 0) continue;
+    const headers = (aoa[headerIdx] as unknown[]).map((h) => String(h ?? "").toLowerCase());
+    const findCol = (re: RegExp) => headers.findIndex((h) => re.test(h));
+    const dateCol = 1;
+    const condCol = findCol(/conducteur/);
+    const ligneCol = findCol(/ligne/);
+    const prixCol = findCol(/prix.*ttc|^ttc|montant/);
+    const payCol = findCol(/paiement|moyen/);
+    const annulCol = findCol(/annul/);
+    if (condCol < 0 || ligneCol < 0 || prixCol < 0) continue;
+
+    for (let i = headerIdx + 1; i < aoa.length; i++) {
+      const r = aoa[i];
+      if (!Array.isArray(r)) continue;
+      if (r.every((c) => c == null || c === "")) continue;
+      rows.push({
+        sheet: sheetName,
+        rowNum: i + 1,
+        date: getCellValue(sheet, i, dateCol),
+        conducteur: r[condCol],
+        ligne: r[ligneCol],
+        prix: r[prixCol],
+        paiement: payCol >= 0 ? r[payCol] : null,
+        annulee: annulCol >= 0 ? r[annulCol] : null,
+      });
+    }
+  }
+
+  if (rows.length === 0) throw new Error("Aucune ligne dans le fichier");
+
+  let my = parseExtractionMonthYear(fileName);
+  if (!my) {
+    for (const r of rows) {
+      const pd = parseRowDate(r.date);
+      if (pd) { my = { year: pd.y, month: pd.m }; break; }
+    }
+  }
+  if (!my) throw new Error("Impossible de déterminer le mois/année");
+
+  const byDriver: Record<string, Record<number, Record<string, number>>> = {};
+  let rowCount = 0;
+  const skipped: SkippedRow[] = [];
+  const fmtDate = (v: unknown) => {
+    if (typeof v === "object" && v && "raw" in (v as Record<string, unknown>)) {
+      const cell = v as DateCellValue;
+      return cell.text || (cell.raw == null ? "" : String(cell.raw));
+    }
+    return v == null ? "" : String(v);
+  };
+  const pushSkip = (row: Row, reason: SkipReason) => {
+    skipped.push({
+      reason,
+      sheet: row.sheet,
+      row: row.rowNum,
+      date: fmtDate(row.date),
+      conducteur: String(row.conducteur ?? ""),
+      ligne: String(row.ligne ?? ""),
+      prix: row.prix == null ? "" : String(row.prix),
+    });
+  };
+
+  for (const row of rows) {
+    if (String(row.annulee || "").toLowerCase() === "oui") { pushSkip(row, "annulee"); continue; }
+    const cat = lineToCategory(row.ligne);
+    if (!cat) { pushSkip(row, "ligne_inconnue"); continue; }
+    const prix = Number(row.prix);
+    if (!prix || isNaN(prix)) { pushSkip(row, "prix_invalide"); continue; }
+    const driverNorm = normalizeDriverName(String(row.conducteur || ""));
+    if (!driverNorm) { pushSkip(row, "conducteur_vide"); continue; }
+    const pd = parseRowDate(row.date, my.month);
+    if (!pd) { pushSkip(row, "date_invalide"); continue; }
+    if (pd.y !== my.year || pd.m !== my.month) { pushSkip(row, "hors_mois"); continue; }
+    const day = pd.d;
+    if (!day || day < 1 || day > 31) { pushSkip(row, "date_invalide"); continue; }
+    const pay = paymentToType(row.paiement);
+    const key = getCellKey(cat, pay);
+    if (!byDriver[driverNorm]) byDriver[driverNorm] = {};
+    if (!byDriver[driverNorm][day]) byDriver[driverNorm][day] = {};
+    byDriver[driverNorm][day][key] = (byDriver[driverNorm][day][key] || 0) + prix;
+    rowCount++;
+  }
+
+  for (const dn of Object.keys(byDriver)) {
+    for (const day of Object.keys(byDriver[dn])) {
+      const e = byDriver[dn][Number(day)];
+      for (const k of Object.keys(e)) e[k] = Math.round(e[k] * 100) / 100;
+    }
+  }
+
+  return {
+    year: my.year,
+    month: my.month,
+    byDriver,
+    driversFound: Object.keys(byDriver),
+    rowCount,
+    skipped,
+    totalRows: rows.length,
+  };
 }
 
 export async function importExtractionFile(file: File): Promise<ExtractionImportResult> {

@@ -45,3 +45,19 @@ Object.defineProperty(globalThis, "indexedDB", {
   writable: true,
   configurable: true,
 });
+
+// Polyfill Blob.arrayBuffer() for jsdom using FileReader
+if (typeof Blob !== "undefined" && typeof Blob.prototype.arrayBuffer !== "function") {
+  Blob.prototype.arrayBuffer = function (this: Blob): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
+}
+// Also ensure File has it (File inherits from Blob)
+if (typeof File !== "undefined" && typeof File.prototype.arrayBuffer !== "function") {
+  File.prototype.arrayBuffer = Blob.prototype.arrayBuffer;
+}

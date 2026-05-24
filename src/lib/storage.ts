@@ -410,10 +410,10 @@ export async function loadAllMonths(): Promise<MonthData[]> {
     console.warn("Supabase loadAllMonths failed, using localStorage:", e);
   }
 
-  // Fallback: load from localStorage
+  // Fallback: load from localStorage (skip timestamp keys which end with "_ts")
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith(MONTH_KEY_PREFIX)) {
+    if (key && key.startsWith(MONTH_KEY_PREFIX) && !key.endsWith("_ts")) {
       try {
         results.push(JSON.parse(localStorage.getItem(key)!));
       } catch {}

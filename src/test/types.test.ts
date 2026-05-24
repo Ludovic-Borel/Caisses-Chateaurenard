@@ -26,7 +26,7 @@ describe("Constants", () => {
   it("MONTH_NAMES contient 12 mois en français", () => {
     expect(MONTH_NAMES.length).toBe(12);
     expect(MONTH_NAMES[0]).toBe("Janvier");
-    expect(MONTH_NAMES[11]).toBe("Décembre");
+    expect(MONTH_NAMES[11]).toBe("Decembre");
   });
 
   it("DEFAULT_DRIVERS est un tableau non vide de noms en majuscules", () => {

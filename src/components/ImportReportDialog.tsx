@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Link2, Link2Off } from "lucide-react";
 import type { SkippedRow, SkipReason } from "@/lib/import";
+import { loadDrivers, loadDriverMappings, saveDriverMapping, removeDriverMapping } from "@/lib/storage";
+import { toast } from "sonner";
 
 interface UnmatchedDriver {
   name: string;
@@ -19,6 +25,7 @@ interface Report {
 interface Props {
   report: Report | null;
   onClose: () => void;
+  onReimport?: () => void;
 }
 
 const REASON_LABELS: Record<SkipReason, string> = {
@@ -71,7 +78,7 @@ function csv(v: unknown) {
   return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export default function ImportReportDialog({ report, onClose }: Props) {
+export default function ImportReportDialog({ report, onClose, onReimport }: Props) {
   const open = report !== null;
   const issues = report ? report.skipped.length + report.unmatched.length : 0;
 
@@ -178,6 +185,11 @@ export default function ImportReportDialog({ report, onClose }: Props) {
           {report && issues > 0 && (
             <Button variant="outline" onClick={() => downloadCsv(report)}>
               Exporter en CSV
+            </Button>
+          )}
+          {onReimport && (
+            <Button variant="default" onClick={onReimport}>
+              Réimporter avec les associations
             </Button>
           )}
           <Button onClick={onClose}>Fermer</Button>
