@@ -77,8 +77,6 @@ export default function Index() {
   const excelBackupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   const driversRef = useRef(drivers);
-  const skipFirstExcelRef = useRef(true);
-  const lastExcelSaveRef = useRef<string>("");
 
   // Initial load + Supabase init + migration + realtime
   useEffect(() => {
@@ -176,22 +174,9 @@ export default function Index() {
     return () => { if (saveDriversTimeoutRef.current) clearTimeout(saveDriversTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
   }, [drivers]);
 
-  // ---------- Auto-save Excel backup ----------
+  // ---------- Auto-save Excel backup (debounced) ----------
   useEffect(() => {
-    // Skip initial load
-    if (skipFirstExcelRef.current) {
-      skipFirstExcelRef.current = false;
-      // Don't save on initial mount but still serialize for future comparison
-      lastExcelSaveRef.current = JSON.stringify({ data, drivers });
-      return;
-    }
-    // Only save if a backup directory is configured
     if (!backupDirName) return;
-
-    const serialized = JSON.stringify({ data, drivers });
-    if (serialized === lastExcelSaveRef.current) return;
-    lastExcelSaveRef.current = serialized;
-
     if (excelBackupTimeoutRef.current) clearTimeout(excelBackupTimeoutRef.current);
     excelBackupTimeoutRef.current = setTimeout(async () => {
       setExcelBackupStatus("saving");
