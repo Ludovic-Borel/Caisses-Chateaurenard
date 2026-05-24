@@ -538,6 +538,27 @@ export default function Index() {
             <p className="text-primary-foreground/70 text-sm">Relevé des Caisses Mensuel</p>
           </div>
           <div className="flex items-center gap-2 justify-self-end">
+            {/* Save status indicators */}
+            {saveStatus === "saving" && (
+              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
+              </span>
+            )}
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-green-300">
+                <CheckCircle2 className="h-3 w-3" /> Enregistré
+              </span>
+            )}
+            {backupDirName && excelBackupStatus === "saving" && (
+              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin" /> Excel...
+              </span>
+            )}
+            {backupDirName && excelBackupStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-green-300">
+                <CheckCircle2 className="h-3 w-3" /> Excel OK
+              </span>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="sm" className="text-xs h-8">
@@ -628,28 +649,6 @@ export default function Index() {
             >
               <Printer className="h-3.5 w-3.5 mr-1" /> PDF
             </Button>
-
-            {/* Save status indicators */}
-            {saveStatus === "saving" && (
-              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
-              </span>
-            )}
-            {saveStatus === "saved" && (
-              <span className="flex items-center gap-1 text-xs text-green-300">
-                <CheckCircle2 className="h-3 w-3" /> Enregistré
-              </span>
-            )}
-            {backupDirName && excelBackupStatus === "saving" && (
-              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin" /> Excel...
-              </span>
-            )}
-            {backupDirName && excelBackupStatus === "saved" && (
-              <span className="flex items-center gap-1 text-xs text-green-300">
-                <CheckCircle2 className="h-3 w-3" /> Excel OK
-              </span>
-            )}
           </div>
         </div>
       </header>
