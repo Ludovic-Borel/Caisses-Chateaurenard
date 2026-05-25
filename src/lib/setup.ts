@@ -27,13 +27,17 @@ export async function initializeSupabase(): Promise<boolean> {
       return false;
     }
 
-    // Tentative de connexion (optionnelle - les RLS sont publiques)
-    const { error: signInError } = await supabase!.auth.signInWithPassword({
-      email: "Agent84@villeton.fr",
-      password: "Qqqsssddd222+",
-    });
-    if (signInError) {
-      console.warn("Supabase auth sign-in failed (non bloquant):", signInError.message);
+    // Tentative de connexion via variables d'environnement
+    const envEmail = import.meta.env.VITE_SUPABASE_EMAIL;
+    const envPassword = import.meta.env.VITE_SUPABASE_PASSWORD;
+    if (envEmail && envPassword) {
+      const { error: signInError } = await supabase!.auth.signInWithPassword({
+        email: envEmail,
+        password: envPassword,
+      });
+      if (signInError) {
+        console.warn("Supabase auth sign-in failed (non bloquant):", signInError.message);
+      }
     }
 
     // Vérifier si la table months existe
