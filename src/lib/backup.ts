@@ -1,4 +1,4 @@
-import { MonthData, MONTH_NAMES, getDaysInMonth, CATEGORIES, PAYMENT_TYPES, getCellKey } from "./types";
+import { MonthData, MONTH_NAMES, getDaysInMonth, CATEGORIES, PAYMENT_TYPES, getCellKey, DriverMonthData } from "./types";
 import { buildWorkbook } from "./export";
 import { fillRecapSheet } from "./recap-export";
 import * as XLSX from "xlsx";
@@ -294,6 +294,63 @@ export async function updateExistingBackup(
   a.click();
   URL.revokeObjectURL(url);
   return true;
+}
+
+// ---------- Export CSV ----------
+export function exportToCSV(data: MonthData, drivers: string[]): void {
+  const daysInMonth = getDaysInMonth(data.year, data.month);
+  const sep = ";";
+  const lines: string[] = [];
+
+  // Header
+  const header = ["Jour", ...drivers.flatMap(d => [`${d} Esp.`, `${d} CB`, `${d} Total`])];
+  lines.push(header.join(sep));
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const row: string[] = [`${day}/${data.month + 1}`];
+    for (const driver of drivers) {
+      const dd = data.drivers[driver];
+      const esp = dd?.days[day]?.[getCellKey("704" as any, "especes")] || 0;
+      const cb = dd?.days[day]?.[getCellKey("704" as any, "cb")] || 0;
+      // Sum across all categories
+      let totalEsp = 0, totalCb = 0;
+      if (dd?.days[day]) {
+        for (const [key, val] of Object.entries(dd.days[day])) {
+          if (key.endsWith("_especes")) totalEsp += val;
+          else if (key.endsWith("_cb")) totalCb += val;
+        }
+      }
+      row.push(totalEsp.toFixed(2).replace(".", ","));
+      row.push(totalCb.toFixed(2).replace(".", ","));
+      row.push((totalEsp + totalCb).toFixed(2).replace(".", ","));
+    }
+    lines.push(row.join(sep));
+  }
+
+  const totals = ["TOTAL", ...drivers.flatMap(d => {
+    let te = 0, tc = 0;
+    const dd = data.drivers[d];
+    if (dd) {
+      for (let day = 1; day <= daysInMonth; day++) {
+        if (dd.days[day]) {
+          for (const [key, val] of Object.entries(dd.days[day])) {
+            if (key.endsWith("_especes")) te += val;
+            else if (key.endsWith("_cb")) tc += val;
+          }
+        }
+      }
+    }
+    return [te.toFixed(2).replace(".", ","), tc.toFixed(2).replace(".", ","), (te + tc).toFixed(2).replace(".", ",")];
+  })];
+  lines.push(totals.join(sep));
+
+  const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;header=present" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Caisses_${MONTH_NAMES[data.month]}_${data.year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------- Helper to add a "Recap" sheet compatible with importWorkbookFile ----------

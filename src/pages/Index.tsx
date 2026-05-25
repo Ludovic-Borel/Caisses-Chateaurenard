@@ -4,7 +4,7 @@ import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, mig
 import { initializeSupabase } from "@/lib/setup";
 import { configureSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
-import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup } from "@/lib/backup";
+import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, exportToCSV } from "@/lib/backup";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
 import DriverList from "@/components/DriverList";
@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo.png";
@@ -560,6 +560,30 @@ export default function Index() {
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
+  // ---------- Keyboard shortcuts ----------
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ctrl+I : Import Excel
+      if ((e.ctrlKey || e.metaKey) && e.key === "i") {
+        e.preventDefault();
+        if (isCurrentMonth && !extractionMode) fileInputRef.current?.click();
+      }
+      // Ctrl+Z : Undo import
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        if (undoState) {
+          e.preventDefault();
+          handleUndo();
+        }
+      }
+      // Ctrl+P : Print/PDF
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        // Let browser handle print
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isCurrentMonth, extractionMode, undoState, handleUndo]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg">
@@ -686,6 +710,12 @@ export default function Index() {
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
                   <Database className="h-4 w-4 mr-2" />
                   <span>Configurer Supabase</span>
+                </DropdownMenuItem>
+              <DropdownMenuSeparator />
+                {/* Export CSV */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); exportToCSV(data, drivers); }} className="cursor-pointer">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  <span>Export CSV</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {/* Help */}
