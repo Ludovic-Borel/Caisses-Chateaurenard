@@ -108,6 +108,11 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 
+  /* View transition animation for main content */
+  .view-enter {
+    animation: fade-in 0.3s ease-out;
+  }
+
   /* Print styles for PDF export */
   @media print {
     body * {

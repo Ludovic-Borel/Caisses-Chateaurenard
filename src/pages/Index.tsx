@@ -22,8 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug } from "lucide-react";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 import logo from "@/assets/logo.png";
 
 function createEmptyMonth(year: number, month: number): MonthData {
@@ -35,7 +36,10 @@ export default function Index() {
   const [data, setData] = useState<MonthData>(() => createEmptyMonth(now.getFullYear(), now.getMonth()));
   const [drivers, setDrivers] = useState<string[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string | null>("__dashboard__");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem("recettes_sidebar_open");
+    return saved !== null ? saved === "true" : true;
+  });
   const [extractionMode, setExtractionMode] = useState(false);
   const [importReport, setImportReport] = useState<{
     matched: number;
@@ -52,6 +56,10 @@ export default function Index() {
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
   const [excelBackupStatus, setExcelBackupStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [undoState, setUndoState] = useState<{ data: MonthData; drivers: string[] } | null>(null);
+  const [modifiedSinceSave, setModifiedSinceSave] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [newVersion, setNewVersion] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -109,6 +117,20 @@ export default function Index() {
       setData(m || createEmptyMonth(now.getFullYear(), now.getMonth()));
       setDrivers(d);
       setLoading(false);
+      // Check for new version on GitHub
+      try {
+        const res = await fetch("https://api.github.com/repos/Ludovic-Borel/Caisses-Chateaurenard/releases/latest");
+        if (res.ok) {
+          const release = await res.json();
+          const current = "v2.00";
+          const latest = release.tag_name || release.name || "";
+          if (latest && latest !== current && latest.localeCompare(current, undefined, { numeric: true, sensitivity: 'base' }) > 0) {
+            setNewVersion(latest);
+          }
+        }
+      } catch {
+        // Silently ignore network errors
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -150,11 +172,13 @@ export default function Index() {
   useEffect(() => {
     dataRef.current = data;
     if (skipNextSave.current) { skipNextSave.current = false; return; }
+    setModifiedSinceSave(true);
     setSaveStatus("saving");
     if (saveDataTimeoutRef.current) clearTimeout(saveDataTimeoutRef.current);
     saveDataTimeoutRef.current = setTimeout(async () => {
       await saveMonth(data);
       setSaveStatus("saved");
+      setModifiedSinceSave(false);
       saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
     return () => { if (saveDataTimeoutRef.current) clearTimeout(saveDataTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
@@ -164,11 +188,13 @@ export default function Index() {
   useEffect(() => {
     driversRef.current = drivers;
     if (skipNextDriversSave.current) { skipNextDriversSave.current = false; return; }
+    setModifiedSinceSave(true);
     setSaveStatus("saving");
     if (saveDriversTimeoutRef.current) clearTimeout(saveDriversTimeoutRef.current);
     saveDriversTimeoutRef.current = setTimeout(async () => {
       await saveDrivers(drivers);
       setSaveStatus("saved");
+      setModifiedSinceSave(false);
       saveIdleTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
     }, 500);
     return () => { if (saveDriversTimeoutRef.current) clearTimeout(saveDriversTimeoutRef.current); if (saveIdleTimeoutRef.current) clearTimeout(saveIdleTimeoutRef.current); };
@@ -435,8 +461,12 @@ export default function Index() {
     let successCount = 0;
     let lastImported: { year: number; month: number } | null = null;
     const allNewDrivers = new Set<string>();
+    const fileArray = Array.from(files);
+    setImportProgress({ current: 0, total: fileArray.length });
 
-    for (const file of Array.from(files)) {
+    for (let idx = 0; idx < fileArray.length; idx++) {
+      const file = fileArray[idx];
+      setImportProgress({ current: idx + 1, total: fileArray.length });
       try {
         const result = await importWorkbookFile(file);
         const existing = await loadMonth(result.data.year, result.data.month);
@@ -491,6 +521,7 @@ export default function Index() {
       }
     }
 
+    setImportProgress(null);
     setLoading(false);
     if (successCount > 0) toast.success(`${successCount} fichier(s) importé(s)`);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -525,6 +556,7 @@ export default function Index() {
     toast.success("Fichier modèle retiré");
   }, []);
 
+  const { theme, setTheme } = useTheme();
   const daysInMonth = getDaysInMonth(data.year, data.month);
   const isCurrentMonth = data.year === now.getFullYear() && data.month === now.getMonth();
 
@@ -559,6 +591,35 @@ export default function Index() {
                 <CheckCircle2 className="h-3 w-3" /> Excel OK
               </span>
             )}
+            {/* Import progress bar */}
+            {importProgress && (
+              <span className="flex items-center gap-1.5 text-xs text-primary-foreground/80">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Import {importProgress.current}/{importProgress.total}</span>
+                <div className="w-16 h-1.5 bg-primary-foreground/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-foreground/60 rounded-full transition-all duration-300"
+                    style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                  />
+                </div>
+              </span>
+            )}
+            {/* Modified badge */}
+            {modifiedSinceSave && (
+              <span className="flex items-center gap-1 text-xs text-amber-300 animate-pulse">
+                Modifié
+              </span>
+            )}
+            {/* Theme toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "Mode clair" : "Mode sombre"}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="sm" className="text-xs h-8">
@@ -625,6 +686,17 @@ export default function Index() {
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
                   <Database className="h-4 w-4 mr-2" />
                   <span>Configurer Supabase</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Help */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setHelpOpen(true); }} className="cursor-pointer">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  <span>Aide</span>
+                </DropdownMenuItem>
+                {/* Report bug */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); window.open("https://github.com/Ludovic-Borel/Caisses-Chateaurenard/issues/new", "_blank"); }} className="cursor-pointer">
+                  <Bug className="h-4 w-4 mr-2" />
+                  <span>Signaler un bug</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -771,7 +843,7 @@ export default function Index() {
         </div>
       </div>
 
-      <main className="px-6 pb-8 print-content">
+      <main className="px-6 pb-8 print-content view-enter" key={selectedDriver}>
         <div className="flex gap-6">
           {sidebarOpen && (
           <div className="w-[220px] flex-shrink-0">
@@ -796,7 +868,11 @@ export default function Index() {
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-muted-foreground"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  onClick={() => {
+                    const next = !sidebarOpen;
+                    setSidebarOpen(next);
+                    localStorage.setItem("recettes_sidebar_open", String(next));
+                  }}
                   title={sidebarOpen ? "Masquer la liste des chauffeurs" : "Afficher la liste des chauffeurs"}
                 >
                   {sidebarOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
@@ -834,11 +910,56 @@ export default function Index() {
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
       <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20 no-print">
-        Caisses Chateaurenard v1.0 •
+        Caisses Chateaurenard v2.00 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
           GitHub
         </a>
+        {newVersion && (
+          <span className="ml-2 text-amber-500 font-semibold">
+            • Nouvelle version disponible : <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard/releases" target="_blank" rel="noopener noreferrer" className="hover:text-primary underline">{newVersion}</a>
+          </span>
+        )}
       </footer>
+
+      {/* Help Dialog */}
+      {helpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setHelpOpen(false)}>
+          <div className="bg-card text-card-foreground rounded-lg shadow-xl border border-border max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-border">
+              <h2 className="text-lg font-bold">Aide - Caisses Chateaurenard</h2>
+            </div>
+            <div className="p-4 text-sm space-y-3">
+              <div>
+                <h3 className="font-semibold text-primary mb-1">📥 Importer un fichier Excel</h3>
+                <p className="text-muted-foreground">Ouvrez le menu <strong>Config et Import</strong> → <strong>Importer Excel</strong>. Sélectionnez un fichier "Recettes Lignes MM - YYYY.xlsx". Les données sont fusionnées avec le mois correspondant.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary mb-1">📄 Importer une Extraction</h3>
+                <p className="text-muted-foreground">Activez d'abord le mode <strong>Extraction</strong> (bouton en haut), puis utilisez <strong>Importer Extraction</strong> dans le menu. Les fichiers attendus sont du type <em>ventes-realisees-orientees-reseau_*.xlsx</em>.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary mb-1">💾 Sauvegarde automatique</h3>
+                <p className="text-muted-foreground">Configurez un <strong>dossier de sauvegarde</strong> dans le menu. Un fichier Excel est automatiquement généré à chaque modification (5s après la dernière saisie).</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary mb-1">☁️ Synchronisation Cloud</h3>
+                <p className="text-muted-foreground">Cliquez sur <strong>Configurer Supabase</strong> pour entrer votre URL et clé API. Une fois connecté, les données sont synchronisées automatiquement toutes les 5 minutes et au retour en ligne.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary mb-1">🖨️ Export PDF</h3>
+                <p className="text-muted-foreground">Utilisez le bouton <strong>PDF</strong> dans le header. L'impression navigateur génère un PDF en format A4 paysage.</p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary mb-1">🌙 Mode sombre</h3>
+                <p className="text-muted-foreground">Cliquez sur l'icône ☀️/🌙 dans le header pour basculer entre les thèmes clair et sombre.</p>
+              </div>
+            </div>
+            <div className="p-4 border-t border-border flex justify-end">
+              <Button variant="default" size="sm" onClick={() => setHelpOpen(false)}>Fermer</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
