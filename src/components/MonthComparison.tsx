@@ -107,8 +107,8 @@ export default function MonthComparison({ drivers }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="pb-4 border-b border-border flex flex-col items-center justify-center min-h-[56px]">
-        <h2 className="text-lg font-bold text-primary leading-tight">Comparaison mois/mois</h2>
+      <div className="pb-5 border-b-2 border-border flex flex-col items-center justify-center min-h-[64px]">
+        <h2 className="text-xl font-bold text-primary leading-tight">Comparaison mois/mois</h2>
       </div>
 
       {/* Month selectors */}
