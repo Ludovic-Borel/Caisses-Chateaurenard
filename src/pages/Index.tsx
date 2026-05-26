@@ -122,7 +122,7 @@ export default function Index() {
         const res = await fetch("https://api.github.com/repos/Ludovic-Borel/Caisses-Chateaurenard/releases/latest");
         if (res.ok) {
           const release = await res.json();
-          const current = "v2.00";
+          const current = "v2.1";
           const latest = release.tag_name || release.name || "";
           if (latest && latest !== current && latest.localeCompare(current, undefined, { numeric: true, sensitivity: 'base' }) > 0) {
             setNewVersion(latest);
@@ -942,7 +942,7 @@ export default function Index() {
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
       <footer className="text-center text-[10px] text-muted-foreground/70 py-2 select-none border-t border-border/20 no-print">
-        Caisses Chateaurenard v2.00 •
+        Caisses Chateaurenard v2.1 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
           GitHub
         </a>
