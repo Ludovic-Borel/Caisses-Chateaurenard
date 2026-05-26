@@ -64,12 +64,18 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
     setEditName("");
   };
 
-  // Scroll to the selected driver when selection changes
+  // Scroll to center the selected driver in the scrollable area
   useEffect(() => {
     if (!selectedDriver || selectedDriver.startsWith("__")) return;
     const el = document.getElementById(`driver-item-${selectedDriver}`);
-    if (el) {
-      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (el && scrollRef.current) {
+      const container = scrollRef.current;
+      const itemTop = el.offsetTop;
+      const containerHeight = container.clientHeight;
+      const itemHeight = el.offsetHeight;
+      // Scroll to center the item in the container
+      const scrollTarget = itemTop - (containerHeight / 2) + (itemHeight / 2);
+      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
     }
   }, [selectedDriver]);
 
