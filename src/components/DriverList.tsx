@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +25,7 @@ interface Props {
 
 export default function DriverList({ drivers, activeDrivers, selectedDriver, onSelect, onAddDriver, onRemoveDriver, onRenameDriver }: Props) {
   const activeSet = new Set(activeDrivers ?? drivers);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editingDriver, setEditingDriver] = useState<string | null>(null);
@@ -62,6 +63,15 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
     setEditingDriver(null);
     setEditName("");
   };
+
+  // Scroll to the selected driver when selection changes
+  useEffect(() => {
+    if (!selectedDriver || selectedDriver.startsWith("__")) return;
+    const el = document.getElementById(`driver-item-${selectedDriver}`);
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [selectedDriver]);
 
   const confirmDelete = () => {
     if (deleteConfirmDriver) {
@@ -132,7 +142,7 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
         )
       )}
 
-      <div className="max-h-[calc(100vh-272px)] overflow-y-auto">
+      <div className="max-h-[calc(100vh-272px)] overflow-y-auto" ref={scrollRef}>
         {filteredDrivers.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-muted-foreground italic">
             Aucun résultat
@@ -140,8 +150,9 @@ export default function DriverList({ drivers, activeDrivers, selectedDriver, onS
         ) : filteredDrivers.map((driver) => {
           const isDeleted = !activeSet.has(driver);
           return (
-          <div
+            <div
             key={driver}
+            id={`driver-item-${driver}`}
             className={`group flex items-center justify-between px-3 py-1.5 text-sm border-b border-border/50 cursor-pointer transition-colors ${
               selectedDriver === driver
                 ? "bg-primary/10 text-primary font-medium"
