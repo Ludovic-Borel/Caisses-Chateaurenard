@@ -130,9 +130,9 @@ export default function YearlyOverview({ year, drivers }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center pb-4 border-b border-border">
-        <h2 className="text-lg font-bold text-primary">Cumul Annuel {year}</h2>
-        <p className="text-sm text-muted-foreground">{stats.monthsLoaded} mois chargés</p>
+      <div className="pb-4 border-b border-border flex flex-col items-center justify-center min-h-[56px]">
+        <h2 className="text-lg font-bold text-primary leading-tight">Cumul Annuel {year}</h2>
+        <p className="text-sm text-muted-foreground leading-tight mt-1">{stats.monthsLoaded} mois chargés</p>
       </div>
 
       {/* KPI Cards */}

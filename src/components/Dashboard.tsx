@@ -70,11 +70,9 @@ export default function Dashboard({ currentData, drivers }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="pb-4 border-b border-border">
-        <div className="text-center">
-          <h2 className="text-lg font-bold text-primary">Tableau de bord</h2>
-          <p className="text-sm text-muted-foreground">{MONTH_NAMES[currentData.month]} {currentData.year}</p>
-        </div>
+      <div className="pb-4 border-b border-border flex flex-col items-center justify-center min-h-[56px]">
+        <h2 className="text-lg font-bold text-primary leading-tight">Tableau de bord</h2>
+        <p className="text-sm text-muted-foreground leading-tight mt-1">{MONTH_NAMES[currentData.month]} {currentData.year}</p>
       </div>
 
       {/* KPI Cards */}
