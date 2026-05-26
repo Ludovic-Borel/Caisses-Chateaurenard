@@ -595,164 +595,167 @@ export default function Index() {
             <h1 className="text-xl font-bold tracking-tight">Caisses Chateaurenard</h1>
             <p className="text-primary-foreground/70 text-sm">Relevé des Caisses Mensuel</p>
           </div>
-          <div className="flex items-center gap-2 justify-self-end">
-            {/* Save status indicators */}
-            {saveStatus === "saving" && (
-              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
-              </span>
-            )}
-            {saveStatus === "saved" && (
-              <span className="flex items-center gap-1 text-xs text-green-300">
-                <CheckCircle2 className="h-3 w-3" /> Enregistré
-              </span>
-            )}
-            {backupDirName && excelBackupStatus === "saving" && (
-              <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin" /> Excel...
-              </span>
-            )}
-            {backupDirName && excelBackupStatus === "saved" && (
-              <span className="flex items-center gap-1 text-xs text-green-300">
-                <CheckCircle2 className="h-3 w-3" /> Excel OK
-              </span>
-            )}
-            {/* Import progress bar */}
-            {importProgress && (
-              <span className="flex items-center gap-1.5 text-xs text-primary-foreground/80">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Import {importProgress.current}/{importProgress.total}</span>
-                <div className="w-16 h-1.5 bg-primary-foreground/20 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary-foreground/60 rounded-full transition-all duration-300"
-                    style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
-                  />
-                </div>
-              </span>
-            )}
-            {/* Modified badge */}
-            {modifiedSinceSave && (
-              <span className="flex items-center gap-1 text-xs text-amber-300 animate-pulse">
-                Modifié
-              </span>
-            )}
-            {/* Theme toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              title={theme === "dark" ? "Mode clair" : "Mode sombre"}
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" className="text-xs h-8">
-                  <Settings2 className="h-3.5 w-3.5 mr-1" /> Config et Import
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                {/* Import Excel */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); fileInputRef.current?.click(); }} className="cursor-pointer">
-                  <Upload className="h-4 w-4 mr-2" />
-                  <span>Importer Excel</span>
-                </DropdownMenuItem>
-                {/* Import Extraction - grisé si mode extraction inactif */}
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    if (!extractionMode) {
-                      toast.error("Activer le mode Extraction pour importer une extraction");
-                      return;
-                    }
-                    extractionFileRef.current?.click();
-                  }}
-                  className={`cursor-pointer ${!extractionMode ? "opacity-40" : ""}`}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  <span>Importer Extraction</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {/* Backup folder */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectBackupDir(); }} className="cursor-pointer">
-                  <Folder className="h-4 w-4 mr-2" />
-                  <div className="flex flex-col">
-                    <span className="text-sm">Dossier de sauvegarde</span>
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
-                      {backupDirName || "Non défini"}
-                    </span>
+          <div className="flex items-center gap-3 justify-self-end">
+            {/* Status indicators group */}
+            <div className="flex items-center gap-2">
+              {saveStatus === "saving" && (
+                <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Sauvegarde...
+                </span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="flex items-center gap-1 text-xs text-green-300">
+                  <CheckCircle2 className="h-3 w-3" /> Enregistré
+                </span>
+              )}
+              {backupDirName && excelBackupStatus === "saving" && (
+                <span className="flex items-center gap-1 text-xs text-primary-foreground/60 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Excel...
+                </span>
+              )}
+              {backupDirName && excelBackupStatus === "saved" && (
+                <span className="flex items-center gap-1 text-xs text-green-300">
+                  <CheckCircle2 className="h-3 w-3" /> Excel OK
+                </span>
+              )}
+              {importProgress && (
+                <span className="flex items-center gap-1.5 text-xs text-primary-foreground/80">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Import {importProgress.current}/{importProgress.total}</span>
+                  <div className="w-16 h-1.5 bg-primary-foreground/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary-foreground/60 rounded-full transition-all duration-300"
+                      style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    />
                   </div>
-                </DropdownMenuItem>
-                {backupDirName && (
-                  <DropdownMenuItem onSelect={handleClearBackupDir} className="cursor-pointer text-destructive">
-                    <Folder className="h-4 w-4 mr-2" />
-                    <span>Retirer le dossier</span>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                {/* Template file */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectTemplateFile(); }} className="cursor-pointer">
-                  <FileText className="h-4 w-4 mr-2" />
-                  <div className="flex flex-col">
-                    <span className="text-sm">Fichier modèle vierge</span>
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
-                      {templateFileName || "Aucun (export normal)"}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-                {templateFileName && (
-                  <DropdownMenuItem onSelect={handleClearTemplateFile} className="cursor-pointer text-destructive">
-                    <FileText className="h-4 w-4 mr-2" />
-                    <span>Retirer le modèle</span>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                {/* Supabase */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
-                  <Database className="h-4 w-4 mr-2" />
-                  <span>Configurer Supabase</span>
-                </DropdownMenuItem>
-              <DropdownMenuSeparator />
-                {/* Export CSV */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); exportToCSV(data, drivers); }} className="cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  <span>Export CSV</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {/* Help */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setHelpOpen(true); }} className="cursor-pointer">
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  <span>Aide</span>
-                </DropdownMenuItem>
-                {/* Report bug */}
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); window.open("https://github.com/Ludovic-Borel/Caisses-Chateaurenard/issues/new", "_blank"); }} className="cursor-pointer">
-                  <Bug className="h-4 w-4 mr-2" />
-                  <span>Signaler un bug</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {undoState && (
+                </span>
+              )}
+              {modifiedSinceSave && (
+                <span className="flex items-center gap-1 text-xs text-amber-300 animate-pulse">
+                  Modifié
+                </span>
+              )}
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="sm"
-                className="text-xs h-8 no-print"
-                onClick={handleUndo}
-                title="Annuler le dernier import et restaurer l'état précédent"
+                className="text-xs h-8 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                title={theme === "dark" ? "Mode clair" : "Mode sombre"}
               >
-                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Annuler
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="text-xs h-8 no-print hidden md:inline-flex"
-              onClick={handlePrint}
-              title="Exporter en PDF (impression navigateur)"
-            >
-              <Printer className="h-3.5 w-3.5 mr-1" /> PDF
-            </Button>
+            </div>
+
+            {/* Actions group */}
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="sm" className="text-xs h-8">
+                    <Settings2 className="h-3.5 w-3.5 mr-1" /> Config et Import
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72">
+                  {/* Import Excel */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); fileInputRef.current?.click(); }} className="cursor-pointer">
+                    <Upload className="h-4 w-4 mr-2" />
+                    <span>Importer Excel</span>
+                  </DropdownMenuItem>
+                  {/* Import Extraction - grisé si mode extraction inactif */}
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      if (!extractionMode) {
+                        toast.error("Activer le mode Extraction pour importer une extraction");
+                        return;
+                      }
+                      extractionFileRef.current?.click();
+                    }}
+                    className={`cursor-pointer ${!extractionMode ? "opacity-40" : ""}`}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    <span>Importer Extraction</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {/* Backup folder */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectBackupDir(); }} className="cursor-pointer">
+                    <Folder className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span className="text-sm">Dossier de sauvegarde</span>
+                      <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                        {backupDirName || "Non défini"}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  {backupDirName && (
+                    <DropdownMenuItem onSelect={handleClearBackupDir} className="cursor-pointer text-destructive">
+                      <Folder className="h-4 w-4 mr-2" />
+                      <span>Retirer le dossier</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {/* Template file */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleSelectTemplateFile(); }} className="cursor-pointer">
+                    <FileText className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span className="text-sm">Fichier modèle vierge</span>
+                      <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                        {templateFileName || "Aucun (export normal)"}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  {templateFileName && (
+                    <DropdownMenuItem onSelect={handleClearTemplateFile} className="cursor-pointer text-destructive">
+                      <FileText className="h-4 w-4 mr-2" />
+                      <span>Retirer le modèle</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  {/* Supabase */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleConfigureSupabase(); }} className="cursor-pointer">
+                    <Database className="h-4 w-4 mr-2" />
+                    <span>Configurer Supabase</span>
+                  </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                  {/* Export CSV */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); exportToCSV(data, drivers); }} className="cursor-pointer">
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    <span>Export CSV</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {/* Help */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setHelpOpen(true); }} className="cursor-pointer">
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    <span>Aide</span>
+                  </DropdownMenuItem>
+                  {/* Report bug */}
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); window.open("https://github.com/Ludovic-Borel/Caisses-Chateaurenard/issues/new", "_blank"); }} className="cursor-pointer">
+                    <Bug className="h-4 w-4 mr-2" />
+                    <span>Signaler un bug</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {undoState && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="text-xs h-8 no-print"
+                  onClick={handleUndo}
+                  title="Annuler le dernier import et restaurer l'état précédent"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Annuler
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-xs h-8 no-print hidden md:inline-flex"
+                onClick={handlePrint}
+                title="Exporter en PDF (impression navigateur)"
+              >
+                <Printer className="h-3.5 w-3.5 mr-1" /> PDF
+              </Button>
+            </div>
           </div>
         </div>
       </header>
