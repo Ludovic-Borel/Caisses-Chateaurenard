@@ -213,10 +213,12 @@ export default function Index() {
           setTimeout(() => setExcelBackupStatus("idle"), 3000);
         } else {
           setExcelBackupStatus("idle");
+          toast.error("Échec de la sauvegarde Excel : le fichier n'a pas pu être généré", { duration: 4000 });
         }
       } catch (e) {
         console.warn("Excel backup failed:", e);
         setExcelBackupStatus("idle");
+        toast.error(`Erreur sauvegarde Excel : ${e instanceof Error ? e.message : String(e)}`, { duration: 5000 });
       }
     }, 5000);
     return () => {
@@ -587,7 +589,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg">
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
+        <div className="max-w-screen-2xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-4 px-2">
           <img src={logo} alt="Pastouret Rubans-Bleus" className="h-10 object-contain justify-self-start" />
           <div className="flex flex-col items-center justify-center gap-1">
             <h1 className="text-xl font-bold tracking-tight">Caisses Chateaurenard</h1>
@@ -939,7 +941,7 @@ export default function Index() {
       </main>
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
-      <footer className="text-center text-[10px] text-muted-foreground/50 py-2 select-none border-t border-border/20 no-print">
+      <footer className="text-center text-[10px] text-muted-foreground/70 py-2 select-none border-t border-border/20 no-print">
         Caisses Chateaurenard v2.00 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">
           GitHub

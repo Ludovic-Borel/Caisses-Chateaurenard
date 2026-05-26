@@ -47,7 +47,7 @@ All colors MUST be HSL.
     --grid-extract: 200 55% 86%;
     --grid-mismatch: 0 85% 65%;
     --grid-match: 120 55% 86%;
-    --grid-orange: 120 55% 86%;
+    --grid-orange: 35 85% 55%;
     --grid-orange-light: 35 100% 80%;
 
     --sidebar-background: 210 30% 97%;
@@ -100,7 +100,7 @@ All colors MUST be HSL.
     --grid-extract: 200 35% 18%;
     --grid-mismatch: 0 60% 40%;
     --grid-match: 120 35% 18%;
-    --grid-orange: 120 35% 18%;
+    --grid-orange: 35 60% 35%;
     --grid-orange-light: 35 50% 22%;
 
     --sidebar-background: 225 15% 10%;
@@ -126,6 +126,61 @@ All colors MUST be HSL.
   /* View transition animation for main content */
   .view-enter {
     animation: fade-in 0.3s ease-out;
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out forwards;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  /* Staggered animation delays for KPI cards */
+  .kpi-1 { animation-delay: 0ms; }
+  .kpi-2 { animation-delay: 50ms; }
+  .kpi-3 { animation-delay: 100ms; }
+  .kpi-4 { animation-delay: 150ms; }
+  .kpi-5 { animation-delay: 200ms; }
+  .kpi-6 { animation-delay: 250ms; }
+  .kpi-7 { animation-delay: 300ms; }
+  .kpi-8 { animation-delay: 350ms; }
+
+  /* Row hover micro-animation */
+  .grid-row {
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+  .grid-row:hover {
+    transform: scale(1.001);
   }
 
   /* Print styles for PDF export */

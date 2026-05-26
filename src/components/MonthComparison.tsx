@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { MonthData, CATEGORIES, getCellKey, getDaysInMonth, MONTH_NAMES } from "@/lib/types";
 import { loadAllMonths } from "@/lib/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   drivers: string[];
@@ -29,6 +30,7 @@ export default function MonthComparison({ drivers }: Props) {
   const [month2, setMonth2] = useState(now.getMonth() > 0
     ? `${now.getFullYear()}_${now.getMonth() - 1}`
     : `${now.getFullYear() - 1}_11`);
+  const [showAllDrivers, setShowAllDrivers] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -98,6 +100,8 @@ export default function MonthComparison({ drivers }: Props) {
 
     return { s1, s2, m1Label: `${MONTH_NAMES[k1.month]} ${k1.year}`, m2Label: `${MONTH_NAMES[k2.month]} ${k2.year}`, driverRows, m1, m2 };
   }, [allMonths, month1, month2, drivers]);
+
+  const handleShowAllDrivers = () => setShowAllDrivers(true);
 
   if (loading) return <div className="text-center py-8 text-muted-foreground">Chargement...</div>;
 
@@ -181,7 +185,7 @@ export default function MonthComparison({ drivers }: Props) {
 
           {/* Driver comparison */}
           <div className="bg-muted/30 rounded-lg p-4 border border-border">
-            <h3 className="text-sm font-semibold text-primary mb-3">Par chauffeur</h3>
+            <h3 className="text-sm font-semibold text-primary mb-3">Par chauffeur ({stats.driverRows.length} au total)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
@@ -193,7 +197,7 @@ export default function MonthComparison({ drivers }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.driverRows.slice(0, 30).map((d) => (
+                  {(showAllDrivers ? stats.driverRows : stats.driverRows.slice(0, 30)).map((d) => (
                     <tr key={d.name} className="hover:bg-muted/50">
                       <td className="border border-border px-2 py-1 font-medium">{d.name}</td>
                       <td className="border border-border px-2 py-1 text-right">{fmt(d.m1)}</td>
@@ -203,6 +207,11 @@ export default function MonthComparison({ drivers }: Props) {
                   ))}
                 </tbody>
               </table>
+              {!showAllDrivers && stats.driverRows.length > 30 && (
+                <Button variant="outline" size="sm" className="mt-3 w-full text-xs" onClick={handleShowAllDrivers}>
+                  Voir les {stats.driverRows.length} chauffeurs
+                </Button>
+              )}
             </div>
           </div>
         </>

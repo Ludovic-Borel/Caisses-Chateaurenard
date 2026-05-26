@@ -231,35 +231,35 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   return (
     <div className="overflow-x-auto" onMouseLeave={() => { setHoverDay(null); setHoverCol(null); }}>
       {title && <h2 className="text-lg font-bold text-primary mb-3">{title}</h2>}
-      <table className="w-full text-xs border-collapse min-w-[900px]">
+      <table className="w-full text-xs border-collapse min-w-[900px] table-auto">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
-            <th className="border border-border px-2 py-1.5 text-left w-24">Date</th>
+            <th className="border border-border px-1.5 py-1.5 text-left min-w-[130px]">Date</th>
             {CATEGORIES.map((cat) => (
               <th
                 key={cat}
                 colSpan={extractionMode ? 4 : 2}
-                className="border border-border px-2 py-1.5 text-center"
+                className="border border-border px-1 py-1.5 text-center min-w-[90px]"
               >
                 {cat}
               </th>
             ))}
-            <th className="border border-border px-2 py-1.5 text-center w-20">Total</th>
+            <th className="border border-border px-1.5 py-1.5 text-center min-w-[65px]">Total</th>
           </tr>
           <tr className="bg-secondary text-secondary-foreground">
-            <th className="border border-border px-2 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
             {CATEGORIES.map((cat) => (
               <>
                 <th
                   key={`${cat}-e`}
-                  className="border border-border px-1 py-1 text-center bg-grid-especes text-foreground font-medium transition-colors duration-150"
+                  className="border border-border px-0.5 py-1 text-center bg-grid-especes text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
                   style={!isHoverDisabled && hoverCol === `${cat}_especes` ? { backgroundColor: hlBg } : undefined}
                 >
                   Esp.
                 </th>
                 <th
                   key={`${cat}-c`}
-                  className="border border-border px-1 py-1 text-center bg-grid-cb text-foreground font-medium transition-colors duration-150"
+                  className="border border-border px-0.5 py-1 text-center bg-grid-cb text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
                   style={!isHoverDisabled && hoverCol === `${cat}_cb` ? { backgroundColor: hlBg } : undefined}
                 >
                   CB
@@ -268,14 +268,14 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   <>
                     <th
                       key={`${cat}-xe`}
-                      className="border border-border px-1 py-1 text-center bg-grid-extract text-foreground font-medium transition-colors duration-150"
+                      className="border border-border px-0.5 py-1 text-center bg-grid-extract text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
                       style={!isHoverDisabled && hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. Esp.
                     </th>
                     <th
                       key={`${cat}-xc`}
-                      className="border border-border px-1 py-1 text-center bg-grid-extract text-foreground font-medium transition-colors duration-150"
+                      className="border border-border px-0.5 py-1 text-center bg-grid-extract text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
                       style={!isHoverDisabled && hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. CB
@@ -284,7 +284,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 )}
               </>
             ))}
-            <th className="border border-border px-2 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
           </tr>
         </thead>
         <tbody>
@@ -484,13 +484,13 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
             <td className="border border-border px-2 py-1.5 text-center">{fmt(getGrandTotal())}</td>
           </tr>
           <tr className="bg-secondary font-semibold text-sm">
-            <td className="border border-border px-2 py-2" colSpan={3}>
+            <td className="border border-border px-1.5 py-2" colSpan={3}>
               Total Espèces: <span className="text-primary">{fmt(getTotalEspeces())}</span>
             </td>
-            <td className="border border-border px-2 py-2" colSpan={5}>
+            <td className="border border-border px-1.5 py-2" colSpan={extractionMode ? 7 : 3}>
               Total CB: <span className="text-primary">{fmt(getTotalCB())}</span>
             </td>
-            <td className="border border-border px-2 py-2 text-center" colSpan={(CATEGORIES.length * (extractionMode ? 4 : 2)) - 6}>
+            <td className="border border-border px-1.5 py-2 text-center" colSpan={extractionMode ? CATEGORIES.length * 4 - 8 : CATEGORIES.length * 2 - 4}>
               Grand Total: <span className="text-primary font-bold">{fmt(getGrandTotal())}</span>
             </td>
           </tr>

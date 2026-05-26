@@ -93,64 +93,74 @@ export default function RecapGrid({ data, drivers }: Props) {
       <h2 className="text-lg font-bold text-primary mb-3">
         Récapitulatif — {MONTH_NAMES[data.month]} {data.year}
       </h2>
-      <table className="w-full text-xs border-collapse min-w-[800px]">
+      <table className="w-full text-xs border-collapse min-w-[900px] table-auto">
         <thead>
           <tr className="bg-grid-header text-grid-header-foreground">
-            <th className="border border-border px-3 py-1.5 text-left">Chauffeur</th>
+            <th className="border border-border px-2 py-1.5 text-left w-[140px]">Chauffeur</th>
             {CATEGORIES.map((cat) => (
-              <th key={cat} colSpan={2} className="border border-border px-2 py-1.5 text-center">
+              <th key={cat} colSpan={3} className="border border-border px-1 py-1.5 text-center min-w-[130px]">
                 {cat}
               </th>
             ))}
-            <th className="border border-border px-2 py-1.5 text-center">Espèces</th>
-            <th className="border border-border px-2 py-1.5 text-center">CB</th>
-            <th className="border border-border px-2 py-1.5 text-center">Total</th>
-            <th className="border border-border px-2 py-1.5 text-center">Non rendu</th>
+            <th className="border border-border px-1.5 py-1.5 text-center min-w-[70px]">Espèces</th>
+            <th className="border border-border px-1.5 py-1.5 text-center min-w-[70px]">CB</th>
+            <th className="border border-border px-1.5 py-1.5 text-center min-w-[70px]">Total</th>
+            <th className="border border-border px-1.5 py-1.5 text-center min-w-[75px]">Non rendu</th>
           </tr>
           <tr className="bg-secondary text-secondary-foreground">
-            <th className="border border-border px-3 py-1"></th>
+            <th className="border border-border px-2 py-1"></th>
             {CATEGORIES.map((cat) => (
               <>
-                <th key={`${cat}-e`} className="border border-border px-1 py-1 text-center bg-grid-especes text-foreground font-medium text-[10px]">
+                <th key={`${cat}-e`} className="border border-border px-0.5 py-1 text-center bg-grid-especes text-foreground font-medium text-[10px] min-w-[44px]">
                   Esp.
                 </th>
-                <th key={`${cat}-c`} className="border border-border px-1 py-1 text-center bg-grid-cb text-foreground font-medium text-[10px]">
+                <th key={`${cat}-c`} className="border border-border px-0.5 py-1 text-center bg-grid-cb text-foreground font-medium text-[10px] min-w-[44px]">
                   CB
+                </th>
+                <th key={`${cat}-pct`} className="border border-border px-0.5 py-1 text-center bg-muted text-muted-foreground font-medium text-[10px] min-w-[34px]">
+                  %
                 </th>
               </>
             ))}
-            <th className="border border-border px-2 py-1"></th>
-            <th className="border border-border px-2 py-1"></th>
-            <th className="border border-border px-2 py-1"></th>
-            <th className="border border-border px-2 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
+            <th className="border border-border px-1.5 py-1"></th>
           </tr>
         </thead>
         <tbody>
           {driverTotals.map((dt) => (
-            <tr key={dt.driver} className="hover:bg-muted/50 transition-colors">
-              <td className={`border border-border px-3 py-1 font-medium ${dt.totalNotReturned > 0 ? "bg-destructive/15 font-bold" : "text-foreground"}`}>
+            <tr key={dt.driver} className="hover:bg-muted/50 transition-colors grid-row">
+              <td className={`border border-border px-2 py-1 font-medium text-[11px] ${dt.totalNotReturned > 0 ? "bg-destructive/15 font-bold" : "text-foreground"}`}>
                 {dt.driver}
               </td>
-              {CATEGORIES.map((cat) => (
+              {CATEGORIES.map((cat) => {
+                const catTotal = dt.categoryTotals[cat].especes + dt.categoryTotals[cat].cb;
+                const pctVal = dt.total > 0 ? Math.round((catTotal / dt.total) * 100) : 0;
+                return (
                 <>
-                  <td key={`${dt.driver}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
+                  <td key={`${dt.driver}-${cat}-e`} className="border border-border px-0.5 py-1 bg-grid-especes/50 text-center text-[11px]">
                     {fmt(dt.categoryTotals[cat].especes)}
                   </td>
-                  <td key={`${dt.driver}-${cat}-c`} className="border border-border px-1 py-1 bg-grid-cb/50 text-center">
+                  <td key={`${dt.driver}-${cat}-c`} className="border border-border px-0.5 py-1 bg-grid-cb/50 text-center text-[11px]">
                     {fmt(dt.categoryTotals[cat].cb)}
                   </td>
+                  <td key={`${dt.driver}-${cat}-pct`} className="border border-border px-0.5 py-1 bg-muted/30 text-center text-muted-foreground text-[10px] font-semibold">
+                    {catTotal > 0 ? `${pctVal}%` : "—"}
+                  </td>
                 </>
-              ))}
-              <td className="border border-border px-2 py-1 font-medium text-center">
+                );
+              })}
+              <td className="border border-border px-1.5 py-1 font-medium text-center text-[11px]">
                 {fmt(dt.totalEspeces)}
               </td>
-              <td className="border border-border px-2 py-1 font-medium text-center">
+              <td className="border border-border px-1.5 py-1 font-medium text-center text-[11px]">
                 {fmt(dt.totalCB)}
               </td>
-              <td className="border border-border px-2 py-1 font-bold bg-grid-total text-center">
+              <td className="border border-border px-1.5 py-1 font-bold bg-grid-total text-center text-[11px]">
                 {fmt(dt.total)}
               </td>
-              <td className={`border border-border px-2 py-1 text-center font-bold ${dt.totalNotReturned > 0 ? "" : ""}`}>
+              <td className={`border border-border px-1.5 py-1 text-center font-bold text-[11px]`}>
                 {dt.totalNotReturned > 0 ? fmt(dt.totalNotReturned) : "—"}
               </td>
             </tr>
@@ -158,31 +168,34 @@ export default function RecapGrid({ data, drivers }: Props) {
         </tbody>
         <tfoot>
           <tr className="bg-grid-header text-grid-header-foreground font-bold">
-            <td className="border border-border px-3 py-1.5">TOTAL</td>
+            <td className="border border-border px-2 py-1.5">TOTAL</td>
             {CATEGORIES.map((cat) => {
               const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
               const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
+              const gt = grandTotals.total;
+              const pctVal = gt > 0 ? Math.round(((catE + catC) / gt) * 100) : 0;
               return (
                 <>
-                  <td key={`t-${cat}-e`} className="border border-border px-1 py-1 text-center">{fmt(catE)}</td>
-                  <td key={`t-${cat}-c`} className="border border-border px-1 py-1 text-center">{fmt(catC)}</td>
+                  <td key={`t-${cat}-e`} className="border border-border px-0.5 py-1 text-center">{fmt(catE)}</td>
+                  <td key={`t-${cat}-c`} className="border border-border px-0.5 py-1 text-center">{fmt(catC)}</td>
+                  <td key={`t-${cat}-pct`} className="border border-border px-0.5 py-1 text-center text-muted-foreground text-[10px] font-semibold">{`${pctVal}%`}</td>
                 </>
               );
             })}
-            <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.especes)}</td>
-            <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.cb)}</td>
-            <td className="border border-border px-2 py-1 font-medium text-center">{fmt(grandTotals.total)}</td>
-            <td className={`border border-border px-2 py-1 text-center font-bold ${grandTotals.notReturned > 0 ? "" : ""}`}>
+            <td className="border border-border px-1.5 py-1 font-medium text-center">{fmt(grandTotals.especes)}</td>
+            <td className="border border-border px-1.5 py-1 font-medium text-center">{fmt(grandTotals.cb)}</td>
+            <td className="border border-border px-1.5 py-1 font-medium text-center">{fmt(grandTotals.total)}</td>
+            <td className={`border border-border px-1.5 py-1 text-center font-bold`}>
               {grandTotals.notReturned > 0 ? fmt(grandTotals.notReturned) : "—"}
             </td>
           </tr>
           <tr className="bg-secondary text-secondary-foreground font-bold">
-            <td className="border border-border px-3 py-1.5">TOTAL Esp.+CB</td>
+            <td className="border border-border px-2 py-1.5">TOTAL Esp.+CB</td>
             {CATEGORIES.map((cat) => {
               const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
               const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
               return (
-                <td key={`t-sum-${cat}`} colSpan={2} className="border border-border px-1 py-1.5 bg-grid-total text-center">
+                <td key={`t-sum-${cat}`} colSpan={3} className="border border-border px-0.5 py-1.5 bg-grid-total text-center">
                   {fmt(catE + catC)}
                 </td>
               );
