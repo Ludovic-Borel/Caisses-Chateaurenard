@@ -381,7 +381,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       {/* ====== HEADER (ligne fixe) ====== */}
-      <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg">
+      <header className="bg-primary text-primary-foreground px-6 py-3 shadow-lg sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-4 px-2">
           <img src={logo} alt="Pastouret Rubans-Bleus" className="h-10 object-contain justify-self-start" />
           <div className="flex flex-col items-center justify-center gap-1">
@@ -442,7 +442,7 @@ export default function Index() {
       </header>
 
       {/* ====== BARRE SOUS LE HEADER (indicateurs + supabase + extraction) ====== */}
-      <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3 sticky top-[60px] z-40 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center flex-wrap gap-3">
           <MonthSelector year={data.year} month={data.month} onChange={handleMonthChange} />
           <Button variant={selectedDriver === "__dashboard__" ? "default" : "outline"} onClick={() => { setExtractionMode(false); setSelectedDriver("__dashboard__"); }}>

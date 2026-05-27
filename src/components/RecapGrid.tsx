@@ -98,7 +98,7 @@ export default function RecapGrid({ data, drivers }: Props) {
           <tr className="bg-grid-header text-grid-header-foreground">
             <th className="border border-border px-2 py-1.5 text-left w-[140px]">Chauffeur</th>
             {CATEGORIES.map((cat) => (
-              <th key={cat} colSpan={3} className="border border-border px-1 py-1.5 text-center min-w-[130px]">
+                <th key={cat} colSpan={2} className="border border-border px-1 py-1.5 text-center min-w-[130px]">
                 {cat}
               </th>
             ))}
@@ -116,9 +116,6 @@ export default function RecapGrid({ data, drivers }: Props) {
                 </th>
                 <th key={`${cat}-c`} className="border border-border px-0.5 py-1 text-center bg-grid-cb text-foreground font-medium text-[10px] min-w-[44px]">
                   CB
-                </th>
-                <th key={`${cat}-pct`} className="border border-border px-0.5 py-1 text-center bg-muted text-muted-foreground font-medium text-[10px] min-w-[34px]">
-                  %
                 </th>
               </>
             ))}
@@ -144,9 +141,6 @@ export default function RecapGrid({ data, drivers }: Props) {
                   </td>
                   <td key={`${dt.driver}-${cat}-c`} className="border border-border px-0.5 py-1 bg-grid-cb/50 text-center text-[11px]">
                     {fmt(dt.categoryTotals[cat].cb)}
-                  </td>
-                  <td key={`${dt.driver}-${cat}-pct`} className="border border-border px-0.5 py-1 bg-muted/30 text-center text-muted-foreground text-[10px] font-semibold">
-                    {catTotal > 0 ? `${pctVal}%` : "—"}
                   </td>
                 </>
                 );
@@ -178,7 +172,6 @@ export default function RecapGrid({ data, drivers }: Props) {
                 <>
                   <td key={`t-${cat}-e`} className="border border-border px-0.5 py-1 text-center">{fmt(catE)}</td>
                   <td key={`t-${cat}-c`} className="border border-border px-0.5 py-1 text-center">{fmt(catC)}</td>
-                  <td key={`t-${cat}-pct`} className="border border-border px-0.5 py-1 text-center text-muted-foreground text-[10px] font-semibold">{`${pctVal}%`}</td>
                 </>
               );
             })}
@@ -195,7 +188,7 @@ export default function RecapGrid({ data, drivers }: Props) {
               const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
               const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
               return (
-                <td key={`t-sum-${cat}`} colSpan={3} className="border border-border px-0.5 py-1.5 bg-grid-total text-center">
+                <td key={`t-sum-${cat}`} colSpan={2} className="border border-border px-0.5 py-1.5 bg-grid-total text-center">
                   {fmt(catE + catC)}
                 </td>
               );
