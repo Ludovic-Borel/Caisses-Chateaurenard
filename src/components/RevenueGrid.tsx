@@ -10,6 +10,7 @@ interface Props {
   onChange?: (data: DriverMonthData) => void;
   readOnly?: boolean;
   extractionMode?: boolean;
+  onCellChange?: (field: string, oldVal: number, newVal: number) => void;
 }
 
 const fmtDate = (year: number, month: number, day: number) => {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { MonthData, MONTH_NAMES, DriverMonthData, getDaysInMonth } from "@/lib/types";
-import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange, checkSupabaseStatus, type SupabaseStatus, type MigrationResult } from "@/lib/storage";
+import { loadMonth, saveMonth, loadDrivers, saveDrivers, renameDriverRemote, migrateLocalToRemote, loadAllMonths, enableRealtime, onMonthChange, onDriversChange, checkSupabaseStatus, logChange, type SupabaseStatus, type MigrationResult } from "@/lib/storage";
 import { initializeSupabase } from "@/lib/setup";
 import { configureSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFileDriverName, type SkippedRow, type SkipReason } from "@/lib/import";
@@ -14,6 +14,7 @@ import Dashboard from "@/components/Dashboard";
 import YearlyOverview from "@/components/YearlyOverview";
 import MonthComparison from "@/components/MonthComparison";
 import ImportReportDialog from "@/components/ImportReportDialog";
+import ChangeLogViewer from "@/components/ChangeLogViewer";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug, FileSpreadsheet } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug, FileSpreadsheet, History } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo.png";
@@ -60,6 +61,10 @@ export default function Index() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [newVersion, setNewVersion] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [username, setUsername] = useState(() => localStorage.getItem("recettes_username") || "");
+  const usernameRef = useRef(username);
+  useEffect(() => { usernameRef.current = username; }, [username]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -253,14 +258,18 @@ export default function Index() {
   }, []);
 
   const handleAddDriver = useCallback((name: string) => {
+    const u = usernameRef.current;
     setDrivers((prev) => [...prev, name].sort());
+    logChange({ username: u || "inconnu", year: dataRef.current.year, month: dataRef.current.month, driver: name, action: "add_driver" });
     toast.success(`Chauffeur ${name} ajouté`);
   }, []);
 
   const handleRemoveDriver = useCallback(async (name: string) => {
+    const u = usernameRef.current;
     setDrivers((prev) => prev.filter((d) => d !== name));
     setData((prev) => { const { [name]: _, ...rest } = prev.drivers; return { ...prev, drivers: rest }; });
     if (selectedDriver === name) setSelectedDriver("__dashboard__");
+    logChange({ username: u || "inconnu", year: dataRef.current.year, month: dataRef.current.month, driver: name, action: "remove_driver" });
     try {
       const all = await loadAllMonths();
       const cy = dataRef.current.year, cm = dataRef.current.month;
@@ -271,10 +280,12 @@ export default function Index() {
   }, [selectedDriver]);
 
   const handleRenameDriver = useCallback((oldName: string, newName: string) => {
+    const u = usernameRef.current;
     setDrivers((prev) => prev.map((d) => (d === oldName ? newName : d)).sort());
     setData((prev) => { const { [oldName]: driverData, ...rest } = prev.drivers; return { ...prev, drivers: driverData ? { ...rest, [newName]: driverData } : rest }; });
     if (selectedDriver === oldName) setSelectedDriver(newName);
     renameDriverRemote(oldName, newName);
+    logChange({ username: u || "inconnu", year: dataRef.current.year, month: dataRef.current.month, driver: oldName, new_value: newName, action: "rename_driver" });
     toast.success(`Chauffeur renommé : ${oldName} → ${newName}`);
   }, [selectedDriver]);
 
@@ -420,6 +431,15 @@ export default function Index() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); exportToCSV(data, drivers); }} className="cursor-pointer">
                   <FileSpreadsheet className="h-4 w-4 mr-2" /><span>Export CSV</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const name = window.prompt("Votre nom/prénom :", username); if (name) { setUsername(name); localStorage.setItem("recettes_username", name); toast.success(`Nom d'utilisateur : ${name}`); } }} className="cursor-pointer">
+                  <Settings2 className="h-4 w-4 mr-2" /><div className="flex flex-col"><span className="text-sm">Nom d'utilisateur</span><span className="text-[11px] text-muted-foreground truncate max-w-[200px]">{username || "Non défini"}</span></div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setHistoryOpen(true); }} className="cursor-pointer">
+                  <History className="h-4 w-4 mr-2" /><span>Historique</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setHelpOpen(true); }} className="cursor-pointer">
@@ -594,6 +614,7 @@ export default function Index() {
       </main>
 
       <ImportReportDialog report={importReport} onClose={() => setImportReport(null)} />
+      {historyOpen && <ChangeLogViewer year={data.year} month={data.month} onClose={() => setHistoryOpen(false)} />}
       <footer className="text-center text-[10px] text-muted-foreground/70 py-2 select-none border-t border-border/20 no-print">
         Caisses Chateaurenard v2.1 •
         <a href="https://github.com/Ludovic-Borel/Caisses-Chateaurenard" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors ml-1">GitHub</a>

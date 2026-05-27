@@ -423,6 +423,75 @@ export async function loadAllMonths(): Promise<MonthData[]> {
   return results;
 }
 
+// ---------- Change Logging ----------
+
+export interface ChangeLogEntry {
+  id?: number;
+  username: string;
+  year: number;
+  month: number;
+  driver?: string;
+  field?: string;
+  old_value?: string;
+  new_value?: string;
+  action: string;
+  created_at?: string;
+}
+
+/**
+ * Log a change to Supabase change_logs table.
+ * Silently fails if Supabase is not configured or unavailable.
+ */
+export async function logChange(entry: ChangeLogEntry): Promise<void> {
+  try {
+    if (!supabase) return;
+    const { error } = await supabase.from("change_logs").insert({
+      username: entry.username,
+      year: entry.year,
+      month: entry.month,
+      driver: entry.driver || null,
+      field: entry.field || null,
+      old_value: entry.old_value || null,
+      new_value: entry.new_value || null,
+      action: entry.action,
+    });
+    if (error) {
+      console.warn("[Supabase] logChange failed:", error.message);
+    }
+  } catch (e) {
+    // Silently fail - logging should never block the app
+    console.warn("[Supabase] logChange exception:", e);
+  }
+}
+
+/**
+ * Load change logs for a given month.
+ */
+export async function loadChangeLogs(
+  year: number,
+  month: number
+): Promise<ChangeLogEntry[]> {
+  try {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from("change_logs")
+      .select("*")
+      .eq("year", year)
+      .eq("month", month)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error) {
+      console.warn("[Supabase] loadChangeLogs failed:", error.message);
+      return [];
+    }
+    return (data as ChangeLogEntry[]) || [];
+  } catch (e) {
+    console.warn("[Supabase] loadChangeLogs exception:", e);
+    return [];
+  }
+}
+
 // ---------- Migration (local → Supabase) ----------
 export interface MigrationResult {
   monthsMigrated: number;
