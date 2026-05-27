@@ -330,9 +330,11 @@ export default function Index() {
         const existing = newDrivers[canonical] || { days: {} };
         newDrivers[canonical] = { ...existing, extracts: dayMap };
       }
+      const u = usernameRef.current;
       const updatedMonth = { ...dataRef.current, drivers: newDrivers };
       setData(updatedMonth);
       await saveMonth(updatedMonth);
+      logChange({ username: u || "inconnu", year: result.year, month: result.month, action: "extraction", new_value: `Importé ${file.name}` });
       setImportReport({ matched: matched.length, rowCount: result.rowCount, totalRows: result.totalRows, skipped: result.skipped, unmatched });
       const issuesCount = result.skipped.length + unmatched.length;
       toast.success(`Extraction importée : ${matched.length} chauffeur(s) — ${result.rowCount} ventes${issuesCount > 0 ? ` — ${issuesCount} ligne(s) non importée(s) (voir rapport)` : ""}`);
@@ -360,6 +362,8 @@ export default function Index() {
         result.driversFound.forEach((d) => allNewDrivers.add(d));
         lastImported = { year: result.data.year, month: result.data.month };
         successCount++;
+        const u = usernameRef.current;
+        logChange({ username: u || "inconnu", year: result.data.year, month: result.data.month, action: "import", new_value: `Importé ${file.name} (${result.driversFound.length} chauffeurs)` });
         toast.success(`${file.name} : ${result.driversFound.length} chauffeur(s)`);
       } catch (e) { const msg = e instanceof Error ? e.message : String(e); toast.error(`${file.name} : ${msg}`); }
     }
@@ -604,6 +608,10 @@ export default function Index() {
                     data={data.drivers[selectedDriver] || { days: {} }} daysInMonth={daysInMonth}
                     year={data.year} month={data.month}
                     onChange={(driverData) => handleDriverDataChange(selectedDriver, driverData)} extractionMode={extractionMode}
+                    onCellChange={(field, oldVal, newVal) => {
+                      const u = usernameRef.current;
+                      logChange({ username: u || "inconnu", year: dataRef.current.year, month: dataRef.current.month, driver: selectedDriver, field, old_value: String(oldVal), new_value: String(newVal), action: "update" });
+                    }}
                   />
                   <RecapGrid data={data} drivers={drivers} />
                 </div>

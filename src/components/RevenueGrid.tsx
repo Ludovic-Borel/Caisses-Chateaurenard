@@ -19,7 +19,7 @@ const fmtDate = (year: number, month: number, day: number) => {
   return `${days[d.getDay()]} ${String(day).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}`;
 };
 
-export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false }: Props) {
+export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false, onCellChange }: Props) {
   const now = new Date();
   const isToday = (day: number) => year === now.getFullYear() && month === now.getMonth() && day === now.getDate();
   const [hoverDay, setHoverDay] = useState<number | null>(null);
@@ -121,10 +121,15 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
     (day: number, cat: string, pt: string, value: number) => {
       if (!onChange) return;
       const key = getCellKey(cat as any, pt as any);
+      const oldVal = data.days[day]?.[key] || 0;
       const dayEntry = { ...(data.days[day] || {}), [key]: value };
       onChange({ ...data, days: { ...data.days, [day]: dayEntry } });
+      // Notify parent of the change only if the value actually changed
+      if (onCellChange && Math.abs(oldVal - value) > 0.001) {
+        onCellChange(key, oldVal, value);
+      }
     },
-    [data, onChange]
+    [data, onChange, onCellChange]
   );
 
   const getExtract = (day: number, cat: string, pt: string): number => {
