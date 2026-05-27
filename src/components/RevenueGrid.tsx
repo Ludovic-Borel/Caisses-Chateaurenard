@@ -28,6 +28,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   const [editValue, setEditValue] = useState("");
 
   const isHoverDisabled = extractionMode;
+  const isCommittingRef = useRef(false);
 
   // Build a flat ordered list of cell keys for keyboard navigation
   const cellKeys = useMemo(() => {
@@ -355,12 +356,14 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                               }}
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={(e) => handleKeyNav(e, day, cat, pt, "enter", () => {
+                                isCommittingRef.current = true;
                                 const parsed = parseFloat(editValue.replace(",", ".")) || 0;
                                 setValue(day, cat, pt, parsed);
                                 setEditingCell(null);
+                                setTimeout(() => { isCommittingRef.current = false; }, 50);
                               })}
                               onBlur={() => {
-                                if (editingCell === `${day}-${cat}-${pt}`) {
+                                if (editingCell === `${day}-${cat}-${pt}` && !isCommittingRef.current) {
                                   const parsed = parseFloat(editValue.replace(",", ".")) || 0;
                                   setValue(day, cat, pt, parsed);
                                   setEditingCell(null);
