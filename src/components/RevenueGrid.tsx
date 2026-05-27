@@ -309,6 +309,11 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   {PAYMENT_TYPES.map((pt) => {
                   const val = getValue(day, cat, pt);
                   const nr = isNotReturned(day, cat, pt);
+                  const extVal = getExtract(day, cat, pt);
+                  // En mode extraction : si extraction > 0 mais saisie absente, on affiche l'extraction en rouge (non-rendu)
+                  const showExtractAsMissing = extractionMode && extVal > 0 && val === 0;
+                  const displayValue = showExtractAsMissing ? extVal : val;
+                  const displayNr = showExtractAsMissing ? true : nr;
                   const colKey = `${cat}_${pt}`;
                   const isHighlighted = hoverDay === day || hoverCol === colKey;
                   const bgClass = isOrangeLight
@@ -323,8 +328,8 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     >
                       <div className="flex items-center">
                         {readOnly ? (
-                          <span className={`block px-1 py-0.5 text-center w-full ${nr ? "font-bold text-destructive" : ""}`}>
-                            {fmt(val)}
+                          <span className={`block px-1 py-0.5 text-center w-full ${displayNr ? "font-bold text-destructive" : ""}`}>
+                            {fmt(displayValue)}
                           </span>
                         ) : (
                           <>
@@ -332,12 +337,12 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                               id={getCellId(day, cat, pt, "enter")}
                               type="text"
                               inputMode="decimal"
-                              className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${nr ? "font-bold text-destructive" : ""}`}
-                              value={editingCell === `${day}-${cat}-${pt}` ? editValue : (val ? fmt(val) : "")}
+                              className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${displayNr ? "font-bold text-destructive" : ""}`}
+                              value={editingCell === `${day}-${cat}-${pt}` ? editValue : (displayValue ? fmt(displayValue) : "")}
                               onFocus={() => {
                                 if (!isHoverDisabled) { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }
                                 setEditingCell(`${day}-${cat}-${pt}`);
-                                setEditValue(val ? val.toString().replace(".", ",") : "");
+                                setEditValue(displayValue ? displayValue.toString().replace(".", ",") : "");
                               }}
                               onChange={(e) => setEditValue(e.target.value)}
                               onKeyDown={(e) => handleKeyNav(e, day, cat, pt, "enter", () => {
@@ -353,18 +358,25 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                 }
                               }}
                             />
-                            {val > 0 && (
+                            {displayValue > 0 && (
                               <button
                                 type="button"
-                                onClick={() => toggleNotReturned(day, cat, pt)}
+                                onClick={() => {
+                                  if (showExtractAsMissing) {
+                                    // Copier la valeur extraction dans la saisie
+                                    setValue(day, cat, pt, extVal);
+                                  } else {
+                                    toggleNotReturned(day, cat, pt);
+                                  }
+                                }}
                                 className={`shrink-0 w-4 h-4 mr-0.5 rounded-full text-[8px] leading-none font-bold border ${
-                                  nr
+                                  displayNr
                                     ? "bg-destructive text-destructive-foreground border-destructive"
                                     : "bg-muted text-muted-foreground border-border hover:bg-destructive/20"
                                 }`}
-                                title={nr ? "Marquer comme rendu" : "Marquer comme non rendu"}
+                                title={showExtractAsMissing ? `Copier ${fmt(extVal)} dans la saisie` : (nr ? "Marquer comme rendu" : "Marquer comme non rendu")}
                               >
-                                {nr ? "✓" : "!"}
+                                {displayNr ? "✓" : "!"}
                               </button>
                             )}
                           </>
