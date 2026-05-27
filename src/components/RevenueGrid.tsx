@@ -19,6 +19,8 @@ const fmtDate = (year: number, month: number, day: number) => {
 };
 
 export default function RevenueGrid({ data, daysInMonth, year, month, title, onChange, readOnly = false, extractionMode = false }: Props) {
+  const now = new Date();
+  const isToday = (day: number) => year === now.getFullYear() && month === now.getMonth() && day === now.getDate();
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverCol, setHoverCol] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -311,7 +313,8 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   const nr = isNotReturned(day, cat, pt);
                   const extVal = getExtract(day, cat, pt);
                   // En mode extraction : si extraction > 0 mais saisie absente, on affiche l'extraction en rouge (non-rendu)
-                  const showExtractAsMissing = extractionMode && extVal > 0 && val === 0;
+                  // Sauf pour le jour même car les montants peuvent encore changer
+                  const showExtractAsMissing = extractionMode && extVal > 0 && val === 0 && !isToday(day);
                   const displayValue = showExtractAsMissing ? extVal : val;
                   const displayNr = showExtractAsMissing ? true : nr;
                   const colKey = `${cat}_${pt}`;
