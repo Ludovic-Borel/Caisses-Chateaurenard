@@ -401,8 +401,10 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const xVal = getExtract(day, cat, pt);
                     const entered = getValue(day, cat, pt);
                     const missingEntered = xVal > 0 && entered <= 0;
-                    const mismatch = xVal > 0 && (missingEntered || Math.abs(xVal - entered) > 0.01);
-                    const match = xVal > 0 && entered > 0 && Math.abs(xVal - entered) <= 0.01;
+                    const extractCopiedVisually = missingEntered && !isToday(day);
+                    const strictMismatch = xVal > 0 && entered > 0 && Math.abs(xVal - entered) > 0.01;
+                    const match = xVal > 0 && ((extractCopiedVisually) || (entered > 0 && Math.abs(xVal - entered) <= 0.01));
+                    const mismatch = xVal > 0 && !match;
                     const xKey = `${cat}_extract_${pt}`;
                     const isHl = !isHoverDisabled && (hoverDay === day || hoverCol === xKey);
                     const editKey = `${day}-${cat}-extract-${pt}`;
@@ -417,16 +419,18 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const extBgHighlight = extractionMode && bothExtractsEmpty && hasEntered;
                     const baseBg = extBgHighlight
                       ? "bg-grid-orange-light"
-                      : isOrange ? "bg-grid-orange" : mismatch ? "bg-grid-mismatch" : match ? "bg-grid-match" : "bg-grid-extract";
-                    const title = missingEntered
-                      ? `Extraction présente (${fmt(xVal)}) mais aucune saisie ${pt === "especes" ? "Esp." : "CB"} en face`
-                      : isOrange
-                        ? `Totaux identiques (${fmt(enteredTotal)}) mais répartition différente : Saisie ${pt === "especes" ? "Esp." : "CB"} = ${fmt(entered)}, Ext. = ${fmt(xVal)}`
-                        : mismatch
-                          ? `Écart avec saisie : ${fmt(entered)} vs ${fmt(xVal)}`
-                          : match
-                            ? `Montant extraction identique à la saisie : ${fmt(xVal)}`
-                            : undefined;
+                      : isOrange ? "bg-grid-orange" : match ? "bg-grid-match" : mismatch ? "bg-grid-mismatch" : "bg-grid-extract";
+                    const title = extractCopiedVisually
+                      ? `Valeur extraction affichée dans la saisie ${pt === "especes" ? "Esp." : "CB"} (${fmt(xVal)})`
+                      : missingEntered
+                        ? `Extraction présente (${fmt(xVal)}) mais aucune saisie ${pt === "especes" ? "Esp." : "CB"} en face`
+                        : isOrange
+                          ? `Totaux identiques (${fmt(enteredTotal)}) mais répartition différente : Saisie ${pt === "especes" ? "Esp." : "CB"} = ${fmt(entered)}, Ext. = ${fmt(xVal)}`
+                          : strictMismatch
+                            ? `Écart avec saisie : ${fmt(entered)} vs ${fmt(xVal)}`
+                            : match
+                              ? `Montant extraction identique à la saisie : ${fmt(xVal)}`
+                              : undefined;
                     return (
                       <td
                         key={`${day}-${cat}-x-${pt}`}
