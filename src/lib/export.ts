@@ -1,8 +1,6 @@
 import * as XLSX from "xlsx";
 import { MonthData, CATEGORIES, PAYMENT_TYPES, getCellKey, getDaysInMonth, MONTH_NAMES } from "./types";
 
-const SAVE_DIR_KEY = "recettes_save_dir_handle";
-
 function addSheetHeader(sheet: XLSX.WorkSheet, title: string, colCount: number): void {
   // Row 0: Company name
   // Row 1: Title (month/driver)
@@ -271,50 +269,3 @@ function buildDashboardSheet(
   XLSX.utils.book_append_sheet(wb, sheet, "Tableau de bord");
 }
 
-export async function saveWithFilePicker(data: MonthData, drivers: string[]): Promise<boolean> {
-  const wb = buildWorkbook(data, drivers);
-  const monthLabel = `Recettes_Lignes_${MONTH_NAMES[data.month]}_${data.year}`;
-  const fileName = `${monthLabel}.xlsx`;
-
-  // Try File System Access API (Chrome/Edge)
-  if ("showSaveFilePicker" in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{
-          description: "Fichier Excel",
-          accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
-        }],
-      });
-      const writable = await handle.createWritable();
-      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      await writable.write(new Uint8Array(buf));
-      await writable.close();
-
-      // Remember the directory name for display
-      try {
-        localStorage.setItem(SAVE_DIR_KEY, handle.name);
-      } catch { /* ignore */ }
-
-      return true;
-    } catch (e: any) {
-      if (e.name === "AbortError") return false; // user cancelled
-      // Fallback to download
-    }
-  }
-
-  // Fallback: trigger download
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-  return true;
-}
-
-export function getLastSaveLocation(): string | null {
-  return localStorage.getItem(SAVE_DIR_KEY);
-}
