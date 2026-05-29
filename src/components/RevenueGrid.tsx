@@ -199,7 +199,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   const getTotalCB = (): number =>
     CATEGORIES.reduce((s, cat) => s + getColumnTotal(cat, "cb"), 0);
 
-  const fmt = (v: number) => v.toFixed(2).replace(".", ",") + " €";
+  const fmt = (v: number) => v.toFixed(2).replace(".", ",") + "\u00A0€";
 
   const hlBg = "hsl(var(--grid-highlight))";
 
