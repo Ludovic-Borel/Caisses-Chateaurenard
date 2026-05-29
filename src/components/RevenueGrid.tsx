@@ -297,7 +297,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
         </thead>
         <tbody>
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
-            <tr key={day} className="transition-colors duration-150" style={hoverDay === day ? { backgroundColor: hlBg } : undefined}>
+            <tr key={day} className="transition-colors duration-150">
               <td
                 className="border border-border px-2 py-0.5 font-medium transition-colors duration-150"
                 style={hoverDay === day ? { backgroundColor: hlBg, fontWeight: 700, color: "hsl(var(--primary))" } : { color: "hsl(var(--muted-foreground))" }}
@@ -332,7 +332,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     <td
                       key={`${day}-${cat}-${pt}`}
                       className={`border border-border px-0 py-0 transition-colors duration-150 ${bgClass}`}
-                      style={isHighlighted ? { backgroundColor: hlBg } : undefined}
+                      style={isHighlighted ? { outline: "2px solid hsl(var(--grid-highlight))", outlineOffset: "-2px" } : undefined}
                       onMouseEnter={() => { setHoverDay(day); setHoverCol(colKey); }}
                     >
                       <div className="flex items-center">
@@ -434,7 +434,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                       <td
                         key={`${day}-${cat}-x-${pt}`}
                         className={`border border-border px-0 py-0 transition-colors duration-150 ${baseBg} relative`}
-                        style={isHl ? { backgroundColor: hlBg } : undefined}
+                        style={isHl ? { outline: "2px solid hsl(var(--grid-highlight))", outlineOffset: "-2px" } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
                         title={title}
                       >
