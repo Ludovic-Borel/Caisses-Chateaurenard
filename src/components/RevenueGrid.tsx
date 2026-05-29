@@ -27,7 +27,6 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const isHoverDisabled = extractionMode;
   const isCommittingRef = useRef(false);
 
   // Build a flat ordered list of cell keys for keyboard navigation
@@ -262,14 +261,14 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                 <th
                   key={`${cat}-e`}
                   className="border border-border px-0.5 py-1 text-center bg-grid-especes text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
-                  style={!isHoverDisabled && hoverCol === `${cat}_especes` ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_especes` ? { backgroundColor: hlBg } : undefined}
                 >
                   Esp.
                 </th>
                 <th
                   key={`${cat}-c`}
                   className="border border-border px-0.5 py-1 text-center bg-grid-cb text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
-                  style={!isHoverDisabled && hoverCol === `${cat}_cb` ? { backgroundColor: hlBg } : undefined}
+                  style={hoverCol === `${cat}_cb` ? { backgroundColor: hlBg } : undefined}
                 >
                   CB
                 </th>
@@ -278,14 +277,14 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     <th
                       key={`${cat}-xe`}
                       className="border border-border px-0.5 py-1 text-center bg-grid-extract text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
-                      style={!isHoverDisabled && hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
+                      style={hoverCol === `${cat}_extract_especes` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. Esp.
                     </th>
                     <th
                       key={`${cat}-xc`}
                       className="border border-border px-0.5 py-1 text-center bg-grid-extract text-foreground font-medium text-[10px] transition-colors duration-150 min-w-[44px]"
-                      style={!isHoverDisabled && hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
+                      style={hoverCol === `${cat}_extract_cb` ? { backgroundColor: hlBg } : undefined}
                     >
                       Ext. CB
                     </th>
@@ -298,10 +297,10 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
         </thead>
         <tbody>
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
-            <tr key={day} className="transition-colors duration-150" style={!isHoverDisabled && hoverDay === day ? { backgroundColor: hlBg } : undefined}>
+            <tr key={day} className="transition-colors duration-150" style={hoverDay === day ? { backgroundColor: hlBg } : undefined}>
               <td
                 className="border border-border px-2 py-0.5 font-medium transition-colors duration-150"
-                style={!isHoverDisabled && hoverDay === day ? { backgroundColor: hlBg, fontWeight: 700, color: "hsl(var(--primary))" } : { color: "hsl(var(--muted-foreground))" }}
+                style={hoverDay === day ? { backgroundColor: hlBg, fontWeight: 700, color: "hsl(var(--primary))" } : { color: "hsl(var(--muted-foreground))" }}
               >
                 {fmtDate(year, month, day)}
               </td>
@@ -333,8 +332,8 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     <td
                       key={`${day}-${cat}-${pt}`}
                       className={`border border-border px-0 py-0 transition-colors duration-150 ${bgClass}`}
-                      style={!isHoverDisabled && isHighlighted ? { backgroundColor: hlBg } : undefined}
-                      onMouseEnter={() => { if (!isHoverDisabled) { setHoverDay(day); setHoverCol(colKey); } }}
+                      style={isHighlighted ? { backgroundColor: hlBg } : undefined}
+                      onMouseEnter={() => { setHoverDay(day); setHoverCol(colKey); }}
                     >
                       <div className="flex items-center">
                         {readOnly ? (
@@ -350,7 +349,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                               className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${displayNr ? "font-bold text-destructive" : ""}`}
                               value={editingCell === `${day}-${cat}-${pt}` ? editValue : (displayValue ? fmt(displayValue) : "")}
                               onFocus={() => {
-                                if (!isHoverDisabled) { setHoverDay(day); setHoverCol(`${cat}_${pt}`); }
+                                setHoverDay(day); setHoverCol(`${cat}_${pt}`);
                                 setEditingCell(`${day}-${cat}-${pt}`);
                                 setEditValue(displayValue ? displayValue.toString().replace(".", ",") : "");
                               }}
@@ -406,7 +405,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     const match = xVal > 0 && ((extractCopiedVisually) || (entered > 0 && Math.abs(xVal - entered) <= 0.01));
                     const mismatch = xVal > 0 && !match;
                     const xKey = `${cat}_extract_${pt}`;
-                    const isHl = !isHoverDisabled && (hoverDay === day || hoverCol === xKey);
+                    const isHl = hoverDay === day || hoverCol === xKey;
                     const editKey = `${day}-${cat}-extract-${pt}`;
                     const otherPt = pt === "especes" ? "cb" : "especes";
                     const enteredOther = getValue(day, cat, otherPt);
@@ -451,7 +450,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                 className={`w-full px-1 py-0.5 text-center bg-transparent outline-none focus:bg-primary/5 text-xs ${mismatch && !totalsMatch ? "font-bold" : ""}`}
                                 value={editingCell === editKey ? editValue : (xVal ? fmt(xVal) : "")}
                                 onFocus={() => {
-                                  if (!isHoverDisabled) { setHoverDay(day); setHoverCol(xKey); }
+                                  setHoverDay(day); setHoverCol(xKey);
                                   setEditingCell(editKey);
                                   setEditValue(xVal ? xVal.toString().replace(".", ",") : "");
                                 }}
@@ -493,7 +492,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   <td
                     key={`t-${cat}-${pt}`}
                     className="border border-border px-2 py-1.5 text-center transition-colors duration-150"
-                    style={!isHoverDisabled && hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                    style={hoverCol === `${cat}_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {fmt(getColumnTotal(cat, pt))}
                   </td>
@@ -502,7 +501,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   <td
                     key={`t-${cat}-x-${pt}`}
                     className="border border-border px-2 py-1.5 text-center bg-grid-extract"
-                    style={!isHoverDisabled && hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
+                    style={hoverCol === `${cat}_extract_${pt}` ? { backgroundColor: hlBg, color: "hsl(var(--foreground))" } : undefined}
                   >
                     {(() => { const t = getColumnExtractTotal(cat, pt); return t ? fmt(t) : "—"; })()}
                   </td>
