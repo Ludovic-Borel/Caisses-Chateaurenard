@@ -332,7 +332,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                     <td
                       key={`${day}-${cat}-${pt}`}
                       className={`border border-border px-0 py-0 transition-colors duration-150 ${bgClass}`}
-                      style={isHighlighted ? { outline: "2px solid hsl(var(--grid-highlight))", outlineOffset: "-2px" } : undefined}
+                      style={isHighlighted ? { boxShadow: "inset 0 0 0 200px hsl(var(--grid-highlight) / 0.15)" } : undefined}
                       onMouseEnter={() => { setHoverDay(day); setHoverCol(colKey); }}
                     >
                       <div className="flex items-center">
@@ -434,7 +434,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                       <td
                         key={`${day}-${cat}-x-${pt}`}
                         className={`border border-border px-0 py-0 transition-colors duration-150 ${baseBg} relative`}
-                        style={isHl ? { outline: "2px solid hsl(var(--grid-highlight))", outlineOffset: "-2px" } : undefined}
+                        style={isHl ? { boxShadow: "inset 0 0 0 200px hsl(var(--grid-highlight) / 0.15)" } : undefined}
                         onMouseEnter={() => { setHoverDay(day); setHoverCol(xKey); }}
                         title={title}
                       >
