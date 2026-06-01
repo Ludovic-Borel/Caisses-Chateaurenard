@@ -558,7 +558,6 @@ export default function Index() {
             const list = Array.from(new Set([...drivers, ...Object.keys(data.drivers || {})])).sort();
             if (list.length === 0) { toast.error("Aucun chauffeur disponible"); return; }
             setExtractionMode(true);
-            if (selectedDriver === "__dashboard__" || selectedDriver === "__stats__" || selectedDriver === null) setSelectedDriver("__dashboard__");
           }}>
             <ScanLine className="h-4 w-4 mr-2" /> Extraction
           </Button>
@@ -607,7 +606,7 @@ export default function Index() {
               ) : selectedDriver === "__nonreturned__" ? (
                 <NonReturnedReport data={data} drivers={drivers} />
               ) : selectedDriver === null ? (
-                <RecapGrid data={data} drivers={drivers} />
+                <RecapGrid data={data} drivers={drivers} extractionMode={extractionMode} />
               ) : (
                 <div className="space-y-6">
                   <RevenueGrid title={`Recettes — ${selectedDriver} — ${MONTH_NAMES[data.month]} ${data.year}`}
@@ -619,7 +618,7 @@ export default function Index() {
                       logChange({ username: u || "inconnu", year: dataRef.current.year, month: dataRef.current.month, driver: selectedDriver, field, old_value: String(oldVal), new_value: String(newVal), action: "update" });
                     }}
                   />
-                  <RecapGrid data={data} drivers={drivers} />
+                  <RecapGrid data={data} drivers={drivers} extractionMode={extractionMode} />
                 </div>
               )}
             </div>
