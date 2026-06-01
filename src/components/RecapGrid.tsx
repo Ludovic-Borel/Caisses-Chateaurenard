@@ -61,19 +61,17 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
   const grandExtCb = driverTotals.reduce((s, d) => s + CATEGORIES.reduce((s2, cat) => s2 + d.categoryTotals[cat].extCb, 0), 0);
 
   // Determine cell style based on TOTAL comparison (Esp + CB combined)
-  // vert = totals match (even if individual cells differ)
-  // rouge = extract exists but no entered data
-  // orange = totals differ
+  // vert = totals match; rouge = extract exists but no entered data; orange = totals differ
   function getTotalExtractStyle(
     enteredEsp: number, enteredCb: number,
     extractEsp: number, extractCb: number
   ): string {
     const enteredTotal = enteredEsp + enteredCb;
     const extractTotal = extractEsp + extractCb;
-    if (extractTotal === 0) return ""; // No extract data
-    if (enteredTotal === 0 && extractTotal > 0) return "bg-grid-mismatch"; // Rouge
-    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) <= 0.01) return "bg-grid-match"; // Vert
-    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) > 0.01) return "bg-grid-orange"; // Orange
+    if (extractTotal === 0) return "";
+    if (enteredTotal === 0 && extractTotal > 0) return "bg-grid-mismatch";
+    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) <= 0.01) return "bg-grid-match";
+    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) > 0.01) return "bg-grid-orange";
     return "";
   }
 
@@ -249,11 +247,9 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
             </td>
           </tr>
           <tr className="bg-secondary text-secondary-foreground font-bold">
-            <td className="border border-border px-2 py-1.5">TOTAL Esp.+CB</td>
+            <td className="border border-border px-2 py-1.5">TOTAL (Espèces + CB)</td>
             {CATEGORIES.map((cat) => {
-              const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
-              const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
-              const catTot = catE + catC;
+              const catTot = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes + d.categoryTotals[cat].cb, 0);
               return (
                 <td key={`t-sum-${cat}`} colSpan={extractionMode ? 4 : 2} className="border border-border px-0.5 py-1.5 bg-grid-total text-center">
                   {fmt(catTot)}
@@ -263,6 +259,22 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
             <td colSpan={4} className="border border-border px-1 py-1.5 bg-grid-total text-center">
               {fmt(grandTotals.total)}
             </td>
+          </tr>
+          {/* Ligne : Tout compris (Espèces + CB + Non-rendus) */}
+          <tr className="bg-destructive/15 text-foreground font-bold border-t-2 border-destructive">
+            <td className="border border-border px-2 py-1.5">TOUT COMPRIS (Esp.+CB + non-rendus)</td>
+            {CATEGORIES.map((cat) => {
+              const catTot = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes + d.categoryTotals[cat].cb, 0);
+              return (
+                <td key={`t-all-${cat}`} colSpan={extractionMode ? 4 : 2} className="border border-border px-0.5 py-1.5 bg-destructive/10 text-center font-bold">
+                  {fmt(catTot)}
+                </td>
+              );
+            })}
+            <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.especes)}</td>
+            <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.cb)}</td>
+            <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.total)}</td>
+            <td className="border border-border px-1.5 py-1.5 font-bold text-destructive text-center">{fmt(grandTotals.notReturned)}</td>
           </tr>
           {extractionMode && (
             <tr className="bg-grid-extract/30 text-foreground font-bold">
