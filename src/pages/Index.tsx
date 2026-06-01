@@ -7,6 +7,7 @@ import { importWorkbookFile, importExtractionFile, parseAppDriverName, parseFile
 import { selectBackupDir, clearBackupDir, getBackupDirName, selectTemplateFile, clearTemplateFile, getTemplateFileName, saveBackup, exportToCSV } from "@/lib/backup";
 import RevenueGrid from "@/components/RevenueGrid";
 import RecapGrid from "@/components/RecapGrid";
+import NonReturnedReport from "@/components/NonReturnedReport";
 import DriverList from "@/components/DriverList";
 import MonthSelector from "@/components/MonthSelector";
 import StatsPanel from "@/components/StatsPanel";
@@ -23,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug, FileSpreadsheet, History } from "lucide-react";
+import { TableProperties, LayoutDashboard, Loader2, Upload, ScanLine, FileDown, Folder, FileText, Settings2, Database, CheckCircle2, PanelLeftClose, PanelLeft, BarChart3, GitCompare, Printer, RotateCcw, Sun, Moon, HelpCircle, Bug, FileSpreadsheet, History, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo.png";
@@ -482,6 +483,9 @@ export default function Index() {
           <Button variant={selectedDriver === "__comparison__" ? "default" : "outline"} onClick={() => { setExtractionMode(false); setSelectedDriver("__comparison__"); }}>
             <GitCompare className="h-4 w-4 mr-2" /> Comparer
           </Button>
+          <Button variant={selectedDriver === "__nonreturned__" ? "default" : "outline"} onClick={() => { setExtractionMode(false); setSelectedDriver("__nonreturned__"); }} className="relative">
+            <AlertTriangle className="h-4 w-4 mr-2" /> Non rendus
+          </Button>
           {loading && (
             <span className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
@@ -600,6 +604,8 @@ export default function Index() {
                 <StatsPanel currentData={data} drivers={drivers} />
               ) : selectedDriver === "__dashboard__" ? (
                 <Dashboard currentData={data} drivers={drivers} />
+              ) : selectedDriver === "__nonreturned__" ? (
+                <NonReturnedReport data={data} drivers={drivers} />
               ) : selectedDriver === null ? (
                 <RecapGrid data={data} drivers={drivers} />
               ) : (
