@@ -60,16 +60,20 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
   const grandExtEspeces = driverTotals.reduce((s, d) => s + CATEGORIES.reduce((s2, cat) => s2 + d.categoryTotals[cat].extEspeces, 0), 0);
   const grandExtCb = driverTotals.reduce((s, d) => s + CATEGORIES.reduce((s2, cat) => s2 + d.categoryTotals[cat].extCb, 0), 0);
 
-  // Determine cell style for extraction columns
-  function getExtractDiffStyle(entered: number, extract: number): string {
-    if (extract === 0 && entered === 0) return "";
-    if (extract === 0 && entered > 0) return ""; // No extract data, don't highlight
-    if (entered > 0 && extract > 0 && Math.abs(entered - extract) <= 0.01) return "bg-grid-match"; // Vert = match
-    if (entered > 0 && extract > 0 && Math.abs(entered - extract) > 0.01) {
-      // Check if totals match but cells differ (orange)
-      return "bg-grid-orange"; // Orange = mismatch
-    }
-    if (entered === 0 && extract > 0) return "bg-grid-mismatch"; // Rouge = missing entry
+  // Determine cell style based on TOTAL comparison (Esp + CB combined)
+  // vert = totals match (even if individual cells differ)
+  // rouge = extract exists but no entered data
+  // orange = totals differ
+  function getTotalExtractStyle(
+    enteredEsp: number, enteredCb: number,
+    extractEsp: number, extractCb: number
+  ): string {
+    const enteredTotal = enteredEsp + enteredCb;
+    const extractTotal = extractEsp + extractCb;
+    if (extractTotal === 0) return ""; // No extract data
+    if (enteredTotal === 0 && extractTotal > 0) return "bg-grid-mismatch"; // Rouge
+    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) <= 0.01) return "bg-grid-match"; // Vert
+    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) > 0.01) return "bg-grid-orange"; // Orange
     return "";
   }
 
@@ -119,8 +123,6 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
     extEspeces: Object.values(dayGrandTotals).reduce((s, v) => s + v.extEspeces, 0),
     extCb: Object.values(dayGrandTotals).reduce((s, v) => s + v.extCb, 0),
   };
-
-  const DAY_COLS = extractionMode ? 4 : 2; // Esp/CB or Esp/CB/ExtEsp/ExtCB per category
 
   return (
     <div className="overflow-x-auto space-y-8">
@@ -180,12 +182,7 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
               </td>
               {CATEGORIES.map((cat) => {
                 const catTotal = dt.categoryTotals[cat];
-                const enteredTotal = catTotal.especes + catTotal.cb;
-                const extTotal = catTotal.extEspeces + catTotal.extCb;
-                const hasBoth = enteredTotal > 0 && extTotal > 0;
-                const totalsMatch = hasBoth && Math.abs(enteredTotal - extTotal) <= 0.01;
-                const cellsDiffer = hasBoth && (Math.abs(catTotal.especes - catTotal.extEspeces) > 0.01 || Math.abs(catTotal.cb - catTotal.extCb) > 0.01);
-                const isOrange = hasBoth && totalsMatch && cellsDiffer;
+                const extStyle = extractionMode ? getTotalExtractStyle(catTotal.especes, catTotal.cb, catTotal.extEspeces, catTotal.extCb) : "";
                 return (
                   <>
                     <td key={`${dt.driver}-${cat}-e`} className="border border-border px-0.5 py-1 bg-grid-especes/50 text-center text-[11px]">
@@ -196,10 +193,10 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
                     </td>
                     {extractionMode && (
                       <>
-                        <td key={`${dt.driver}-${cat}-xe`} className={`border border-border px-0.5 py-1 text-center text-[11px] ${getExtractDiffStyle(catTotal.especes, catTotal.extEspeces)}`}>
+                        <td key={`${dt.driver}-${cat}-xe`} className={`border border-border px-0.5 py-1 text-center text-[11px] ${extStyle}`}>
                           {catTotal.extEspeces > 0 ? fmt(catTotal.extEspeces) : "—"}
                         </td>
-                        <td key={`${dt.driver}-${cat}-xc`} className={`border border-border px-0.5 py-1 text-center text-[11px] ${getExtractDiffStyle(catTotal.cb, catTotal.extCb)}`}>
+                        <td key={`${dt.driver}-${cat}-xc`} className={`border border-border px-0.5 py-1 text-center text-[11px] ${extStyle}`}>
                           {catTotal.extCb > 0 ? fmt(catTotal.extCb) : "—"}
                         </td>
                       </>
@@ -230,14 +227,15 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
               const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
               const catXE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extEspeces, 0);
               const catXC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extCb, 0);
+              const extStyle = extractionMode ? getTotalExtractStyle(catE, catC, catXE, catXC) : "";
               return (
                 <>
                   <td key={`t-${cat}-e`} className="border border-border px-0.5 py-1 text-center">{fmt(catE)}</td>
                   <td key={`t-${cat}-c`} className="border border-border px-0.5 py-1 text-center">{fmt(catC)}</td>
                   {extractionMode && (
                     <>
-                      <td key={`t-${cat}-xe`} className="border border-border px-0.5 py-1 text-center bg-grid-extract bg-opacity-30">{catXE > 0 ? fmt(catXE) : "—"}</td>
-                      <td key={`t-${cat}-xc`} className="border border-border px-0.5 py-1 text-center bg-grid-extract bg-opacity-30">{catXC > 0 ? fmt(catXC) : "—"}</td>
+                      <td key={`t-${cat}-xe`} className={`border border-border px-0.5 py-1 text-center ${extStyle}`}>{catXE > 0 ? fmt(catXE) : "—"}</td>
+                      <td key={`t-${cat}-xc`} className={`border border-border px-0.5 py-1 text-center ${extStyle}`}>{catXC > 0 ? fmt(catXC) : "—"}</td>
                     </>
                   )}
                 </>
@@ -331,26 +329,30 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
                     return `${days[dt.getDay()]} ${String(d).padStart(2,"0")}/${String(data.month+1).padStart(2,"0")}`;
                   })()}
                 </td>
-                {CATEGORIES.map((cat) => (
-                  <>
-                    <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
-                      {dailyByCategory[d][cat].especes > 0 ? fmt(dailyByCategory[d][cat].especes) : "—"}
-                    </td>
-                    <td key={`day-${d}-${cat}-c`} className="border border-border px-1 py-1 bg-grid-cb/50 text-center">
-                      {dailyByCategory[d][cat].cb > 0 ? fmt(dailyByCategory[d][cat].cb) : "—"}
-                    </td>
-                    {extractionMode && (
-                      <>
-                        <td key={`day-${d}-${cat}-xe`} className={`border border-border px-1 py-1 text-center ${getExtractDiffStyle(dailyByCategory[d][cat].especes, dailyByCategory[d][cat].extEspeces)}`}>
-                          {dailyByCategory[d][cat].extEspeces > 0 ? fmt(dailyByCategory[d][cat].extEspeces) : "—"}
-                        </td>
-                        <td key={`day-${d}-${cat}-xc`} className={`border border-border px-1 py-1 text-center ${getExtractDiffStyle(dailyByCategory[d][cat].cb, dailyByCategory[d][cat].extCb)}`}>
-                          {dailyByCategory[d][cat].extCb > 0 ? fmt(dailyByCategory[d][cat].extCb) : "—"}
-                        </td>
-                      </>
-                    )}
-                  </>
-                ))}
+                {CATEGORIES.map((cat) => {
+                  const dd = dailyByCategory[d][cat];
+                  const extStyle = extractionMode ? getTotalExtractStyle(dd.especes, dd.cb, dd.extEspeces, dd.extCb) : "";
+                  return (
+                    <>
+                      <td key={`day-${d}-${cat}-e`} className="border border-border px-1 py-1 bg-grid-especes/50 text-center">
+                        {dd.especes > 0 ? fmt(dd.especes) : "—"}
+                      </td>
+                      <td key={`day-${d}-${cat}-c`} className="border border-border px-1 py-1 bg-grid-cb/50 text-center">
+                        {dd.cb > 0 ? fmt(dd.cb) : "—"}
+                      </td>
+                      {extractionMode && (
+                        <>
+                          <td key={`day-${d}-${cat}-xe`} className={`border border-border px-1 py-1 text-center ${extStyle}`}>
+                            {dd.extEspeces > 0 ? fmt(dd.extEspeces) : "—"}
+                          </td>
+                          <td key={`day-${d}-${cat}-xc`} className={`border border-border px-1 py-1 text-center ${extStyle}`}>
+                            {dd.extCb > 0 ? fmt(dd.extCb) : "—"}
+                          </td>
+                        </>
+                      )}
+                    </>
+                  );
+                })}
                 <td className="border border-border px-2 py-1 font-medium text-center">
                   {dayGrandTotals[d].especes > 0 ? fmt(dayGrandTotals[d].especes) : "—"}
                 </td>
@@ -366,18 +368,22 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
           <tfoot>
             <tr className="bg-grid-header text-grid-header-foreground font-bold">
               <td className="border border-border px-3 py-1.5">TOTAL</td>
-              {CATEGORIES.map((cat) => (
-                <>
-                  <td key={`day-t-${cat}-e`} className="border border-border px-1 py-1 text-center">{fmt(categoryDayTotals[cat].especes)}</td>
-                  <td key={`day-t-${cat}-c`} className="border border-border px-1 py-1 text-center">{fmt(categoryDayTotals[cat].cb)}</td>
-                  {extractionMode && (
-                    <>
-                      <td key={`day-t-${cat}-xe`} className="border border-border px-1 py-1 text-center bg-grid-extract/30">{categoryDayTotals[cat].extEspeces > 0 ? fmt(categoryDayTotals[cat].extEspeces) : "—"}</td>
-                      <td key={`day-t-${cat}-xc`} className="border border-border px-1 py-1 text-center bg-grid-extract/30">{categoryDayTotals[cat].extCb > 0 ? fmt(categoryDayTotals[cat].extCb) : "—"}</td>
-                    </>
-                  )}
-                </>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const cdt = categoryDayTotals[cat];
+                const extStyle = extractionMode ? getTotalExtractStyle(cdt.especes, cdt.cb, cdt.extEspeces, cdt.extCb) : "";
+                return (
+                  <>
+                    <td key={`day-t-${cat}-e`} className="border border-border px-1 py-1 text-center">{fmt(cdt.especes)}</td>
+                    <td key={`day-t-${cat}-c`} className="border border-border px-1 py-1 text-center">{fmt(cdt.cb)}</td>
+                    {extractionMode && (
+                      <>
+                        <td key={`day-t-${cat}-xe`} className={`border border-border px-1 py-1 text-center ${extStyle}`}>{cdt.extEspeces > 0 ? fmt(cdt.extEspeces) : "—"}</td>
+                        <td key={`day-t-${cat}-xc`} className={`border border-border px-1 py-1 text-center ${extStyle}`}>{cdt.extCb > 0 ? fmt(cdt.extCb) : "—"}</td>
+                      </>
+                    )}
+                  </>
+                );
+              })}
               <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.especes)}</td>
               <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.cb)}</td>
               <td className="border border-border px-2 py-1 font-medium text-center">{fmt(overallDaily.total)}</td>
