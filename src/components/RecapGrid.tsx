@@ -267,9 +267,16 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
             <tr className="bg-grid-header text-grid-header-foreground font-bold">
               <td className="border border-border px-2 py-1.5">TOTAL GÉNÉRAL</td>
               {CATEGORIES.map((cat) => {
-                const catTot = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes + d.categoryTotals[cat].cb, 0);
+                const catE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes, 0);
+                const catC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].cb, 0);
+                const catNRE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].nrEspeces, 0);
+                const catNRC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].nrCb, 0);
+                const catXE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extEspeces, 0);
+                const catXC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extCb, 0);
+                const extStyle = getTotalExtractStyle(catE, catC, catNRE, catNRC, catXE, catXC);
+                const catTot = catE + catC + catNRE + catNRC;
                 return (
-                  <td key={`t-all-${cat}`} colSpan={4} className="border border-border px-0.5 py-1.5 bg-grid-total text-center font-bold">{fmt(catTot)}</td>
+                  <td key={`t-all-${cat}`} colSpan={4} className={`border border-border px-0.5 py-1.5 text-center font-bold ${extStyle}`}>{fmt(catTot)}</td>
                 );
               })}
               <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.especes)}</td>
