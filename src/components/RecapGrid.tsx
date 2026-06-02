@@ -274,9 +274,9 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
                 const catXE = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extEspeces, 0);
                 const catXC = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].extCb, 0);
                 const extStyle = getTotalExtractStyle(catE, catC, catNRE, catNRC, catXE, catXC);
-                const catTot = catE + catC + catNRE + catNRC;
+                const catTot = catE + catC; // Somme = Esp. + CB seulement
                 return (
-                  <td key={`t-all-${cat}`} colSpan={4} className={`border border-border px-0.5 py-1.5 text-center font-bold ${extStyle}`}>{fmt(catTot)}</td>
+                  <td key={`t-all-${cat}`} colSpan={4} className={`border border-border px-0.5 py-1.5 text-center font-bold ${extStyle === "bg-grid-match" ? "bg-grid-match text-foreground" : extStyle === "bg-grid-mismatch" ? "bg-grid-mismatch text-foreground" : "bg-grid-total"}`}>{fmt(catTot)}</td>
                 );
               })}
               <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.especes)}</td>
