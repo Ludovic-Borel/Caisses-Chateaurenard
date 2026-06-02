@@ -68,19 +68,19 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
   const grandExtEspeces = driverTotals.reduce((s, d) => s + CATEGORIES.reduce((s2, cat) => s2 + d.categoryTotals[cat].extEspeces, 0), 0);
   const grandExtCb = driverTotals.reduce((s, d) => s + CATEGORIES.reduce((s2, cat) => s2 + d.categoryTotals[cat].extCb, 0), 0);
 
-  // Determine cell style based on TOTAL comparison (Esp + CB + non-rendus combined vs extraction)
+  // Determine cell style based on TOTAL comparison (saisi + extraction)
+  // Vert = concordant, Rouge = pas concordant ou extraction sans saisie
   function getTotalExtractStyle(
     enteredEsp: number, enteredCb: number,
     nrEsp: number, nrCb: number,
     extractEsp: number, extractCb: number
   ): string {
-    const enteredTotal = enteredEsp + enteredCb + nrEsp + nrCb; // Include non-returned amounts
+    const enteredTotal = enteredEsp + enteredCb; // Les non-rendus sont déjà dans les totaux
     const extractTotal = extractEsp + extractCb;
     if (extractTotal === 0) return "";
-    if (enteredTotal === 0 && extractTotal > 0) return "bg-grid-mismatch";
-    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) <= 0.01) return "bg-grid-match";
-    if (enteredTotal > 0 && extractTotal > 0 && Math.abs(enteredTotal - extractTotal) > 0.01) return "bg-grid-orange";
-    return "";
+    if (enteredTotal === 0) return "bg-grid-mismatch"; // Rouge : extraction sans saisie
+    if (Math.abs(enteredTotal - extractTotal) <= 0.01) return "bg-grid-match"; // Vert : concordance
+    return "bg-grid-mismatch"; // Rouge : pas concordance
   }
 
   // Compute per-day per-category totals (with extracts and non-returned)
@@ -264,12 +264,12 @@ export default function RecapGrid({ data, drivers, extractionMode = false }: Pro
           </tr>
           {extractionMode && (
             <>
-            <tr className="bg-destructive/15 text-foreground font-bold border-t-2 border-destructive">
-              <td className="border border-border px-2 py-1.5">TOTAL + NON-RENDUS</td>
+            <tr className="bg-grid-header text-grid-header-foreground font-bold">
+              <td className="border border-border px-2 py-1.5">TOTAL GÉNÉRAL</td>
               {CATEGORIES.map((cat) => {
-                const catTot = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes + d.categoryTotals[cat].cb + d.categoryTotals[cat].nrEspeces + d.categoryTotals[cat].nrCb, 0);
+                const catTot = driverTotals.reduce((s, d) => s + d.categoryTotals[cat].especes + d.categoryTotals[cat].cb, 0);
                 return (
-                  <td key={`t-all-${cat}`} colSpan={4} className="border border-border px-0.5 py-1.5 bg-destructive/10 text-center font-bold">{fmt(catTot)}</td>
+                  <td key={`t-all-${cat}`} colSpan={4} className="border border-border px-0.5 py-1.5 bg-grid-total text-center font-bold">{fmt(catTot)}</td>
                 );
               })}
               <td className="border border-border px-1.5 py-1.5 font-bold text-center">{fmt(grandTotals.especes)}</td>
