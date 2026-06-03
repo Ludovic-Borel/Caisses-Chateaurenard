@@ -320,9 +320,10 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                   const extVal = getExtract(day, cat, pt);
                   // En mode extraction : si extraction > 0 mais saisie absente, on affiche l'extraction en rouge (non-rendu)
                   // Sauf pour le jour même car les montants peuvent encore changer
-                  const showExtractAsMissing = extractionMode && extVal > 0 && val === 0 && !isToday(day);
-                  const displayValue = showExtractAsMissing ? extVal : val;
-                  const displayNr = showExtractAsMissing ? true : nr;
+                  // Afficher toujours la valeur réelle saisie, jamais l'extraction à la place
+                  const displayValue = val;
+                  const showOnlyExtract = extractionMode && extVal > 0 && val === 0 && !isToday(day);
+                  const displayNr = showOnlyExtract ? true : nr;
                   const colKey = `${cat}_${pt}`;
                   const isHighlighted = hoverDay === day || hoverCol === colKey;
                   const bgClass = isOrangeLight
@@ -369,11 +370,11 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                 }
                               }}
                             />
-                            {displayValue > 0 && (
+                            {(displayValue > 0 || showOnlyExtract) && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (showExtractAsMissing) {
+                                  if (showOnlyExtract) {
                                     // Copier la valeur extraction dans la saisie
                                     setValue(day, cat, pt, extVal);
                                   } else {
@@ -385,7 +386,7 @@ export default function RevenueGrid({ data, daysInMonth, year, month, title, onC
                                     ? "bg-destructive text-destructive-foreground border-destructive"
                                     : "bg-muted text-muted-foreground border-border hover:bg-destructive/20"
                                 }`}
-                                title={showExtractAsMissing ? `Copier ${fmt(extVal)} dans la saisie` : (nr ? "Marquer comme rendu" : "Marquer comme non rendu")}
+                                title={showOnlyExtract ? `Copier ${fmt(extVal)} dans la saisie` : (nr ? "Marquer comme rendu" : "Marquer comme non rendu")}
                               >
                                 {displayNr ? "✓" : "!"}
                               </button>
