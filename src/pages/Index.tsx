@@ -329,7 +329,26 @@ export default function Index() {
         }
         matched.push(canonical);
         const existing = newDrivers[canonical] || { days: {} };
-        newDrivers[canonical] = { ...existing, extracts: dayMap };
+        // Copy extraction values into days cells and mark them as non-returned
+        const mergedDays = { ...existing.days };
+        const mergedNotReturned = { ...(existing.notReturned || {}) };
+        for (const [dayStr, dayEntries] of Object.entries(dayMap)) {
+          const day = Number(dayStr);
+          const dayEntry = { ...(mergedDays[day] || {}) };
+          for (const [key, val] of Object.entries(dayEntries)) {
+            if (val > 0) {
+              // Only fill if cell is empty or already has the same value (don't overwrite manual entries)
+              if (!dayEntry[key]) {
+                dayEntry[key] = val;
+                // Mark as non-returned (the ! button will allow toggling back)
+                // key format is e.g. "705_especes", notReturned format is e.g. "12_705_especes"
+                mergedNotReturned[`${day}_${key}`] = true;
+              }
+            }
+          }
+          mergedDays[day] = dayEntry;
+        }
+        newDrivers[canonical] = { ...existing, days: mergedDays, notReturned: mergedNotReturned, extracts: dayMap };
       }
       const u = usernameRef.current;
       const updatedMonth = { ...dataRef.current, drivers: newDrivers };
